@@ -52,7 +52,7 @@ typedef struct
 Adafruit_SSD1306 display = Adafruit_SSD1306(128, 64, &WIRE); // Oled display variable
 unsigned long lastTime = 0;                                  // Delay variable
 unsigned long lastSendTime = 0;                              // Delay variable
-String backendIP = "192.168.1.8:5000";                       // Backend IP address and its port
+String backendIP = "192.168.1.6:5000";                       // Backend IP address and its port
 String jwtToken = "";                                        // JWT token variable
 DHT22Data data = {0, 0, false};                              // DHT22 received data
 ConnectButton wifiButton = {false, false, false, 22};        // button to connect/disconnect wifi

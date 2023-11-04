@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\My-Projects\\Thesis-Project\\Embedded_Web_Application\\WebApi\\WebApi.csproj": {}
+    "D:\\My-Projects\\Git\\Temperature-Humidity-Supervisor\\Embedded_Web_Application\\WebApi\\WebApi.csproj": {}
   },
   "projects": {
-    "D:\\My-Projects\\Thesis-Project\\Embedded_Web_Application\\WebApi\\WebApi.csproj": {
+    "D:\\My-Projects\\Git\\Temperature-Humidity-Supervisor\\Embedded_Web_Application\\WebApi\\WebApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\My-Projects\\Thesis-Project\\Embedded_Web_Application\\WebApi\\WebApi.csproj",
+        "projectUniqueName": "D:\\My-Projects\\Git\\Temperature-Humidity-Supervisor\\Embedded_Web_Application\\WebApi\\WebApi.csproj",
         "projectName": "WebApi",
-        "projectPath": "D:\\My-Projects\\Thesis-Project\\Embedded_Web_Application\\WebApi\\WebApi.csproj",
+        "projectPath": "D:\\My-Projects\\Git\\Temperature-Humidity-Supervisor\\Embedded_Web_Application\\WebApi\\WebApi.csproj",
         "packagesPath": "C:\\Users\\acer\\.nuget\\packages\\",
-        "outputPath": "D:\\My-Projects\\Thesis-Project\\Embedded_Web_Application\\WebApi\\obj\\",
+        "outputPath": "D:\\My-Projects\\Git\\Temperature-Humidity-Supervisor\\Embedded_Web_Application\\WebApi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\acer\\AppData\\Roaming\\NuGet\\NuGet.Config"

@@ -19,6 +19,7 @@ let socketData = [0];
 let temperatureRealtimeFlag = 0;
 let humidityRealtimeFlag = 0;
 let socket = null;
+let esp32IP = "192.168.1.2:80";
 
 if (logFlag === "logged") {
   Unlock();
@@ -983,12 +984,12 @@ function Unlock() {
 async function BuzzerHandle(option) {
   if (option === "OFF") {
     /* Send command to ESP32 Web Server to turn off the buzzer */
-    await fetch("http://192.168.1.10:80/Buzzer?Status=OFF", {
+    await fetch(`http://${esp32IP}/Buzzer?Status=OFF`, {
       mode: "no-cors"
     });
   } else if (option === "ON") {
     /* Send command to ESP32 Web Server to turn on the buzzer */
-    await fetch("http://192.168.1.10:80/Buzzer?Status=ON", {
+    await fetch(`http://${esp32IP}/Buzzer?Status=ON`, {
       mode: "no-cors"
     });
   }
@@ -998,12 +999,12 @@ async function BuzzerHandle(option) {
 async function SendHandle(option) {
   if (option === "Send") {
     /* Send command to ESP32 Web Server to send the temperature humidity values */
-    await fetch("http://192.168.1.10:80/Start", {
+    await fetch(`http://${esp32IP}/Start`, {
       mode: "no-cors"
     });
   } else if (option === "Unsend") {
     /* Send command to ESP32 Web Server to stop sending the temperature and humidity values */
-    await fetch("http://192.168.1.10:80/Stop", {
+    await fetch(`http://${esp32IP}/Stop`, {
       mode: "no-cors",
     });
   }
@@ -1011,7 +1012,7 @@ async function SendHandle(option) {
 
 /* Function to turn on realtime mode */
 async function RealtimeMode(status) { 
-  await fetch(`http://192.168.1.10:80/Realtime?Status=${status}`, {
+  await fetch(`http://${esp32IP}/Realtime?Status=${status}`, {
     mode: "no-cors"
   });
 }
@@ -1156,7 +1157,7 @@ async function averagePush(date) {
 /* Websocket */
 function WebsocketInit() {
   // Open websocket connection
-  socket = new WebSocket("ws://192.168.1.10:80/ws"); // websocket handle
+  socket = new WebSocket(`ws://${esp32IP}/ws`); // websocket handle
   // Open connection handle
   socket.onopen = (event) => {
     console.log("WebSocket connection opened");

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "tQBusumrqYrpVTxxcyCohqsta+M8RskKU1COyZ61GwliSCio5u7SoaRuzDpI4Ejt/i5SwkesDSGKun1++kbctw==",
+  "dgSpecHash": "i06JWmanlFcnig2qUeN/8sxAhY2wkY0w2m6EgAgEOQMbXfJ2mxFHIOVLUWZ9s4J52BYQIjOkkIJAImZolx+lAA==",
   "success": true,
-  "projectFilePath": "D:\\My-Projects\\Thesis-Project\\Embedded_Web_Application\\WebApi\\WebApi.csproj",
+  "projectFilePath": "D:\\My-Projects\\Git\\Temperature-Humidity-Supervisor\\Embedded_Web_Application\\WebApi\\WebApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\acer\\.nuget\\packages\\azure.core\\1.24.0\\azure.core.1.24.0.nupkg.sha512",
     "C:\\Users\\acer\\.nuget\\packages\\azure.identity\\1.6.0\\azure.identity.1.6.0.nupkg.sha512",
