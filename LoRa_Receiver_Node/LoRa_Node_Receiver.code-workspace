@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"name": "LoRa_Node_Receiver",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.tcc": "cpp",
+			"fstream": "cpp",
+			"iosfwd": "cpp",
+			"istream": "cpp",
+			"limits": "cpp",
+			"sstream": "cpp",
+			"streambuf": "cpp",
+			"optional": "cpp",
+			"system_error": "cpp",
+			"regex": "cpp"
+		}
+	}
+}

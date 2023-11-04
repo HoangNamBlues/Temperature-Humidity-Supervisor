@@ -1,0 +1,6 @@
+../Board-Support-Packet/Src/LCD_I2C.c:7:6:lcd_send_cmd	32	static
+../Board-Support-Packet/Src/LCD_I2C.c:20:6:lcd_send_data	32	static
+../Board-Support-Packet/Src/LCD_I2C.c:33:6:lcd_init	8	static
+../Board-Support-Packet/Src/LCD_I2C.c:59:6:lcd_send_string	16	static
+../Board-Support-Packet/Src/LCD_I2C.c:64:6:lcd_clear	16	static
+../Board-Support-Packet/Src/LCD_I2C.c:70:6:lcd_put_cursor	16	static
