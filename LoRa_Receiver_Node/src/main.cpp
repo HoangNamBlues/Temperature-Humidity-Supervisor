@@ -67,6 +67,7 @@ const char *sourceId = "20";                                 // define the LoRa 
 const char *seperateCharacter = ",";                         // define the seperate character in the string of LoRa data
 bool cmdFlag = false;                                        // flag to check the command status
 bool buzzerCmdPressed = false;                               // flag to check whether the user has sent the command to turn ON buzzer
+bool wsFlag = false;
 
 /* Function Prototype */
 // LED

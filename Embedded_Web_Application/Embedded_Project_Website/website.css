@@ -207,7 +207,7 @@ form select:hover {
   gap: 2px;
   margin-top: 15px;
 }
-.side-bar-field input {
+.date-search {
   height: 40px;
   width: 180px;
   /* border: none; */
@@ -226,6 +226,7 @@ form select:hover {
   font-size: 40px;
   box-shadow: 3px 4px 3px rgba(0, 0, 0.5);
 }
+
 /* .side-bar-field .search-button {
   font-size: 35px;
   box-shadow: 3px 3px 3px rgb(15, 39, 138);
@@ -240,6 +241,15 @@ form select:hover {
   opacity: 0.7;
   box-shadow: 1px 1px 1px rgba(0, 0, 0.5);
   transition: 0.2s;
+}
+.esp32-ip-search {
+  height: 40px;
+  width: 120px;
+  margin-left: 10px;
+  border-radius: 10px;
+  padding-left: 10px;
+  font-size: 18px;
+  box-shadow: 2px 2px 2px rgb(0, 0, 0);
 }
 
 /* Edit temperature supervisor */
@@ -590,6 +600,23 @@ td {
   margin-top: 100px;
 }
 
+.clock-container {
+  margin-top: 50px;
+  display: flex;
+  flex-direction: row;
+  /* gap: 750px; */
+  justify-content: space-between;
+  align-items: center;
+
+}
+
+#temperature-chart {
+  margin-top: 50px;
+}
+
+#humidity-chart {
+  margin-top: 50px;
+}
 /***************************** Common Class Properties ******************************/
 
 /* Button style 1 */

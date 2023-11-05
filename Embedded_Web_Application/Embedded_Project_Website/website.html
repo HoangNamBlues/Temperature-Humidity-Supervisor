@@ -47,12 +47,12 @@
             <div class="instruction-picture-div">
                 <!-- Text -->
                 <ul>
-                    <p class="instruction-para">Following the instruction below to use this APP:</p>
-                    <li>Step 1: Register/Login your account.</li>
-                    <li>Step 2: Click to the <strong>Get Temperature</strong> button or <strong>Get Humidity</strong>
-                        button to get the lastest Temperature or Humidity respectively.</li>
-                    <li>Step 3: Click <strong>Open Filter</strong> button to open the filter table.</li>
-                    <li>Step 3: Choose the appropriate option (Time/Value/None).</li>
+                    <p class="instruction-para">Some instructions to use this Website:</p>
+                    <li>1) Make sure you have <strong>Register/Login</strong> your account before using this website.</li>
+                    <li>2) Click the <strong>Expand button</strong> to open the side bar buttons.</li>
+                    <li>3) Enter the <strong>IP address</strong> of the ESP32 Webserver to use the <strong>Realtime communication</strong> mode</li>
+                    <li>4) Click <strong>Open Filter button</strong> to open the filter table. Then choosing the appropriate filter option
+                    (Time/Value/None).</li>
                 </ul>
 
                 <!-- Picture -->
@@ -124,6 +124,11 @@
                 <p>Not Connected</p>
             </div> -->
             <div class="side-bar-field">
+                <ion-icon class="ws-connect-button" name="caret-forward-circle-outline"></ion-icon>
+                <ion-icon class="ws-disconnect-button" name="pause-circle-outline"></ion-icon>
+                <input class="esp32-ip-search" type="text" placeholder="IP Address">
+            </div>
+            <div class="side-bar-field">
                 <ion-icon class="send-button" name="send-outline"></ion-icon>
                 <p class="send-state">Send</p>
             </div>
@@ -131,7 +136,7 @@
                 <ion-icon name="notifications-outline" class="buzzer-button"></ion-icon>
                 <p class="buzzer-state">OFF</p>
             </div>
-            <div class="side-bar-field">
+            <!-- <div class="side-bar-field">
                 <select>
                     <option value="">👉 Choose a Month</option>
                     <option value="January">1. January</option>
@@ -147,13 +152,13 @@
                     <option value="November">11. November</option>
                     <option value="December">12. December</option>
                 </select>
-            </div>
-            <div class="side-bar-field">
+            </div> -->
+            <!-- <div class="side-bar-field">
                 <ion-icon class="chart-button" name="bar-chart-outline"></ion-icon>
                 <p>Draw Chart</p>
-            </div>
+            </div> -->
             <div class="side-bar-field">
-                <input type="date">
+                <input class="date-search" type="date">
             </div>
             <div class="side-bar-field">
                 <ion-icon class="average-button" name="calculator-outline"></ion-icon>
@@ -204,6 +209,19 @@
                 </div>
             </div>
 
+            <!-- Line chart using canvas-->
+            <!-- <div class="graph">
+                <canvas id="temperature-chart"></canvas>
+                <canvas id="humidity-chart"></canvas>
+            </div> -->
+            <!-- Line chart using Google Chart API -->
+            <div class="clock-container">
+                <div id="temperature-clock"></div>
+                <div id="humidity-clock"></div>
+            </div>
+            <div id="temperature-chart"></div>
+            <div id="humidity-chart"></div>
+
             <!-- Filter Section -->
             <div class="filter-table-div">
                 <!-- Filter Table -->
@@ -227,14 +245,6 @@
                     <button class="back-button button-style-2">🔙 Back</button>
                 </div>
             </div>
-
-            <!-- Line chart using canvas-->
-            <div class="graph">
-                <canvas id="temperature-chart"></canvas>
-                <canvas id="humidity-chart"></canvas>
-            </div>
-            <!-- Line chart using Google Chart API -->
-            <div id="chart_div"></div>
         </main>
     </div>
 

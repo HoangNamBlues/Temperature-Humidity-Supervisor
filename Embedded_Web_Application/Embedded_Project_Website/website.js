@@ -10,18 +10,36 @@ let loginFlag = 0;
 let registerFlag = 0;
 let loginForm = null;
 let registerForm = null;
-let option = 0; // option = 0 --> temperature | option = 1 --> humidity
+let option = 0;                                             // option = 0 --> temperature | option = 1 --> humidity
 let temperatureAverage = [];
 let humidityAverage = [];
 let realtimeTemperature = null; 
 let realtimeHumidity = null;
 let socketData = [0];
-let temperatureRealtimeFlag = 0;
-let humidityRealtimeFlag = 0;
-let socket = null;
-let esp32IP = "192.168.1.2:80";
+let socket = null;                                          // Websocket handle
+let esp32IP = null;                                         // IP address of esp32 
 
-// State handler
+// Google Chart API configuration
+// load current chart package
+google.charts.load("current", {
+  packages: ["corechart", "line", "gauge"]
+});
+
+google.charts.setOnLoadCallback(temperatureClock);
+google.charts.setOnLoadCallback(humidityClock);
+
+// set callback function when api loaded
+google.charts.setOnLoadCallback(DrawTemperatureChart);
+google.charts.setOnLoadCallback(DrawHumidityChart);
+
+// Other configuration
+$(".option-button").css("color", "rgb(203, 29, 29)");
+$(".user-name").text("");
+
+// Hide some element at the beginning
+$(".filter-table-div").hide();
+$("form").hide();
+$(".side-bar").hide();
 if (logFlag === "logged") {
   Unlock();
   $(".register-button").hide();
@@ -32,24 +50,9 @@ else {
   // Block table control
   Block();
 }
-
-// Google Chart API configuration
-// load current chart package
-google.charts.load("current", {
-  packages: ["corechart", "line"]
-});
-
-// set callback function when api loaded
-google.charts.setOnLoadCallback(drawChart);
-
-// Other configuration
-$(".option-button").css("color", "rgb(203, 29, 29)");
-$(".user-name").text("");
-
-// Hide some element at the beginning
-$(".filter-table-div").hide();
-$("form").hide();
-$(".side-bar").hide();
+$(".ws-disconnect-button").hide();
+$("#temperature-chart").hide();
+$("#humidity-chart").hide();
 
 /************************************************************ Add Event Listener ****************************************************************/
 
@@ -83,20 +86,6 @@ $(".temperature-button").click(function () {
   } else {
     var audio = new Audio("./Audio/classic-click.mp3");
     audio.play();
-    if ($(".temperature-button").text() == "Get Temperature ☀️") {
-      temperatureRealtimeFlag = 1;
-      RealtimeMode("ON");
-      $(".temperature-button").text("Turn OFF");
-      // setInterval(GetLatestTemperature, 500); // get the temperature every 500ms
-    }
-    else { 
-      temperatureRealtimeFlag = 0;
-      $(".temperature-result").text("");
-      $(".temperature-button").text("Get Temperature ☀️");
-      if (temperatureRealtimeFlag == 0 && humidityRealtimeFlag == 0) { 
-        RealtimeMode("OFF");
-      }
-    }
   }
 });
 
@@ -108,19 +97,6 @@ $(".humidity-button").click(function () {
   } else {
     var audio = new Audio("./Audio/classic-click.mp3");
     audio.play();
-    if ($(".humidity-button").text() == "💧 Get Humidity 💧") {
-      humidityRealtimeFlag = 1;
-      RealtimeMode("ON");
-      $(".humidity-button").text("Turn OFF");
-      // setInterval(GetLatestHumidity, 500); // get humidity every 500ms
-    } else {
-      humidityRealtimeFlag = 0;
-      $(".humidity-result").text("");
-      $(".humidity-button").text("💧 Get Humidity 💧");
-      if (temperatureRealtimeFlag == 0 && humidityRealtimeFlag == 0) {
-        RealtimeMode("OFF");
-      }
-    }
   }
 });
 
@@ -219,7 +195,6 @@ $(".buzzer-button").click(function () {
 $(".expand-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  WebsocketInit();
   $(".expand").hide();
   $(".side-bar").fadeIn();
   $(".body-container").addClass("body-container-shrink");
@@ -233,7 +208,6 @@ $(".expand-button").click(function () {
 $(".shrink-button").click(function () {
   var audio = new Audio("./Audio/Back-Sound.mp3");
   audio.play();
-  socket.close();
   $(".side-bar").hide();
   $(".body-container").removeClass("body-container-shrink");
   $(".temperature-picture").removeClass("temperature-picture-shrink");
@@ -282,6 +256,26 @@ $(".chart-button").click(function () {
   // $(".graph").append('<canvas id="temperature-chart"></canvas>');
   // $(".graph").append('<canvas id="humidity-chart"></canvas>');
   // DrawChart();
+});
+// Websocket connect button
+$(".ws-connect-button").click(function () {
+  var audio = new Audio("./Audio/classic-click.mp3");
+  audio.play();
+  esp32IP = $(".esp32-ip-search")[0].value;
+  $(".ws-connect-button").hide();
+  $(".ws-disconnect-button").fadeIn();
+  $("#temperature-chart").fadeIn();
+  $("#humidity-chart").fadeIn();
+  WebsocketInit(esp32IP);
+});
+// Websocket disconnect button
+$(".ws-disconnect-button").click(function () {
+  var audio = new Audio("./Audio/classic-click.mp3");
+  audio.play();
+  $(".ws-connect-button").fadeIn();
+  $(".ws-disconnect-button").hide();
+  // $(".esp32-ip-search")[0].value = "";
+  socket.close();
 });
 
 // Add click event for filter buttons using Jquery
@@ -1012,7 +1006,7 @@ async function SendHandle(option) {
 
 /* Function to turn on realtime mode */
 async function RealtimeMode(status) { 
-  await fetch(`http://${esp32IP}/Realtime?Status=${status}`, {
+  await fetch(`http://${esp32IP}:80/Realtime?Status=${status}`, {
     mode: "no-cors"
   });
 }
@@ -1155,21 +1149,22 @@ async function averagePush(date) {
 }
 
 /* Websocket */
-function WebsocketInit() {
+function WebsocketInit(esp32IP) {
   // Open websocket connection
-  socket = new WebSocket(`ws://${esp32IP}/ws`); // websocket handle
+  socket = new WebSocket(`ws://${esp32IP}:80/ws`); // websocket handle
   // Open connection handle
   socket.onopen = (event) => {
     console.log("WebSocket connection opened");
+    RealtimeMode("ON");
   };
   // Listening the message from other devices
   socket.onmessage = (event) => {
     socketData = event.data.split(",");
-    if (temperatureRealtimeFlag && socketData[0] === "data") {
+    if (socketData[0] === "data") {
       $(".temperature-result").text(socketData[1]);
       realtimeTemperature = parseFloat(socketData[1]);
     }
-    if (humidityRealtimeFlag && socketData[0] === "data") {
+    if (socketData[0] === "data") {
       $(".humidity-result").text(socketData[2]);
       realtimeHumidity = parseFloat(socketData[2]);
     }
@@ -1185,6 +1180,7 @@ function WebsocketInit() {
     } else {
       console.error("WebSocket connection abruptly closed");
     }
+    RealtimeMode("OFF");
   };
   // Connection error handle
   socket.onerror = (error) => {
@@ -1193,16 +1189,19 @@ function WebsocketInit() {
 }
 
 /* Google Chart draw function */
-function drawChart() {
+
+// Temperature chart
+function DrawTemperatureChart() {
   // create data object with default value
   let data = google.visualization.arrayToDataTable([
-    ["Time", "Humidity", "Temperature"],
-    [0, 0, 0],
+    ["Time", "Temperature"],
+    [0, 0], 
   ]);
 
   // create options object with titles, colors, etc.
   let options = {
-    title: "Temperature & Humidity",
+    color: ['red'],
+    title: "Temperature",
     'width': 1200,
     'height': 300,
     hAxis: {
@@ -1210,13 +1209,13 @@ function drawChart() {
       textPosition: "none",
     },
     vAxis: {
-      title: "Value",
+      title: "Degree",
     },
   };
 
   // draw chart on load
   let chart = new google.visualization.LineChart(
-    document.getElementById("chart_div")
+    document.getElementById("temperature-chart")
   );
   chart.draw(data, options);
   // max amount of data rows that should be displayed
@@ -1226,12 +1225,116 @@ function drawChart() {
   setInterval(function () {
     // instead of this random, you can make an ajax call for the current cpu usage or what ever data you want to display
     let temperature = realtimeTemperature;
+    if (data.getNumberOfRows() > maxDatas) {
+      data.removeRows(0, data.getNumberOfRows() - maxDatas);
+    }
+    data.addRow([index, temperature]);
+    chart.draw(data, options);
+    index++;
+  }, 100);
+}
+
+// Humidity chart
+function DrawHumidityChart() {
+  // create data object with default value
+  let data = google.visualization.arrayToDataTable([
+    ["Time", "Humidity"],
+    [0, 0], 
+  ]);
+
+  // create options object with titles, colors, etc.
+  let options = {
+    color: ['blue'],
+    title: "Humidity",
+    'width': 1200,
+    'height': 300,
+    hAxis: {
+      title: "Time",
+      textPosition: "none",
+    },
+    vAxis: {
+      title: "Percent",
+    },
+  };
+
+  // draw chart on load
+  let chart = new google.visualization.LineChart(
+    document.getElementById("humidity-chart")
+  );
+  chart.draw(data, options);
+  // max amount of data rows that should be displayed
+  let maxDatas = 100;
+  // interval for adding new data every 250ms
+  let index = 0;
+  setInterval(function () {
+    // instead of this random, you can make an ajax call for the current cpu usage or what ever data you want to display
     let humidity = realtimeHumidity;
     if (data.getNumberOfRows() > maxDatas) {
       data.removeRows(0, data.getNumberOfRows() - maxDatas);
     }
-    data.addRow([index, humidity, temperature]);
+    data.addRow([index, humidity]);
     chart.draw(data, options);
     index++;
   }, 100);
+}
+
+// Temperature clock
+function temperatureClock() {
+  var data = google.visualization.arrayToDataTable([
+    ["Label", "Value"],
+    ["Temperature", 0],
+  ]);
+
+  var options = {
+    max: 80,
+    min: -40,
+    height: 280,
+    width: 1000,
+    greenFrom: 16,
+    greenTo: 40,
+    minorTicks: 5,
+
+  };
+
+  var chart = new google.visualization.Gauge(
+    document.getElementById("temperature-clock")
+  );
+
+  chart.draw(data, options);
+
+  setInterval(function () {
+    let temperature = realtimeTemperature;
+    data.setValue(0, 1, temperature);
+    chart.draw(data, options);
+  }, 10);
+}
+
+// Humidity clock
+function humidityClock() {
+  var data = google.visualization.arrayToDataTable([
+    ["Label", "Value"],
+    ["Humidity", 0],
+  ]);
+
+  var options = {
+    max: 100,
+    min: 0,
+    height: 280,
+    width: 1000,
+    greenFrom: 30,
+    greenTo: 80,
+    minorTicks: 5,
+  };
+
+  var chart = new google.visualization.Gauge(
+    document.getElementById("humidity-clock")
+  );
+
+  chart.draw(data, options);
+
+  setInterval(function () {
+    let humidity = realtimeHumidity;
+    data.setValue(0, 1, humidity);
+    chart.draw(data, options);
+  }, 10);
 }
