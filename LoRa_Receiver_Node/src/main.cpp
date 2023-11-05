@@ -60,6 +60,7 @@ ConnectButton loraButton = {false, false, false, 32};        // button to connec
 bool sendingFlag = false;                                    // flag to identify whether esp32 sends data to web api or not
 bool loginFlag = false;                                      // flag to identify whether you have logan or not
 AsyncWebServer server(80);                                   // ESP32 server listening on port 80
+AsyncWebSocket ws("/ws");                                    // ESP32 websocket handle
 bool webserverFlag = false;                                  // flag to check whether esp32 was set as webserver
 bool realtimeFlag = false;                                   // flag to check the realtime mode
 const char *sourceId = "20";                                 // define the LoRa Id of this esp32 device
@@ -96,7 +97,8 @@ void Delayms(unsigned long ms); // User defined delay milisecond
 // Oled
 void OledDisplay(double temp, double humid); // Oled display
 void LoRaStatusDisplay();                    // LoRa status Oled display
-void WiFiStatusDislay();                     // WiFI status Oled dispaly
+void WiFiStatusDislay();                     // WiFI status Oled display
+void WebapiStatusDisplay();                  // Web API status Oled display
 // Websocket
 void notifyClients();
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
@@ -173,6 +175,7 @@ void loop()
   if (loraButton.connect)
   {
     data = LoRaReceive(); // receive dht22 data
+    Serial.println("\n\nReceived LoRa data\n\n");
   }
   OledDisplay(data.temp, data.humid);
   Delayms(10);
@@ -205,9 +208,15 @@ void loop()
       // POST data to webserver
       if (sendingFlag == true && buzzerCmdPressed == false)
       {
-        PostTemperature(data.temp, jwtToken);
-        Delayms(5);
-        PostHumidity(data.humid, jwtToken);
+        if (millis() - lastSendTime > 5000)
+        {
+          Serial.println("Start sending to web api");
+          PostTemperature(data.temp, jwtToken);
+          Delayms(10);
+          PostHumidity(data.humid, jwtToken);
+          lastSendTime = millis();
+          Serial.println("Stop sending to web api");
+        }
       }
       // PUSH data to the website directly
       if (realtimeFlag == true)
@@ -597,7 +606,7 @@ void Delayms(unsigned long ms)
     ;
 }
 
-/* Display information on OLED */
+/* Oled display information */
 void OledDisplay(double temp, double humid)
 {
   display.setCursor(0, 0);
@@ -605,6 +614,7 @@ void OledDisplay(double temp, double humid)
   {
     display.clearDisplay();
     WiFiStatusDislay();
+    WebapiStatusDisplay();
     LoRaStatusDisplay();
     display.print("\nTemperature: ");
     display.print(String(temp));
@@ -615,6 +625,7 @@ void OledDisplay(double temp, double humid)
   else
   {
     WiFiStatusDislay();
+    WebapiStatusDisplay();
     LoRaStatusDisplay();
   }
   // write the buffer to the display
@@ -626,11 +637,24 @@ void LoRaStatusDisplay()
 {
   if (loraButton.connect == true)
   {
-    display.println("\nLoRaReceiver: Active");
+    display.println("LoRa: Active");
   }
   else
   {
-    display.println("\nLoRaReceiver: Sleep");
+    display.println("LoRa: Sleep");
+  }
+}
+
+/* Sending to webapi status display */
+void WebapiStatusDisplay()
+{
+  if (sendingFlag == true)
+  {
+    display.println("Sending...");
+  }
+  else
+  {
+    display.println("");
   }
 }
 
@@ -648,6 +672,8 @@ void WiFiStatusDislay()
     display.println("WiFi: Connected");
     display.print("SSID: ");
     display.println(String(WiFi.SSID()));
+    display.print("IP: ");
+    display.println(WiFi.localIP());
   }
 }
 
@@ -814,7 +840,6 @@ DHT22Data LoRaReceive()
     }
 
 /* Websocket */
-AsyncWebSocket ws("/ws");
 void notifyClients()
 {
   ws.textAll("Hello Browser");
