@@ -1,0 +1,10 @@
+20:30:48 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+make -j20 all 
+arm-none-eabi-size   LoRa_Sender_Node.elf 
+   text	   data	    bss	    dec	    hex	filename
+  44448	    516	   2576	  47540	   b9b4	LoRa_Sender_Node.elf
+Finished building: default.size.stdout
+ 
+
+20:30:48 Build Finished. 0 errors, 0 warnings. (took 285ms)
+
