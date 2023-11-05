@@ -97,61 +97,11 @@ void Delayms(unsigned long ms); // User defined delay milisecond
 void OledDisplay(double temp, double humid); // Oled display
 void LoRaStatusDisplay();                    // LoRa status Oled display
 void WiFiStatusDislay();                     // WiFI status Oled dispaly
-
 // Websocket
-AsyncWebSocket ws("/ws");
-void notifyClients()
-{
-  ws.textAll("Hello Browser");
-}
-
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
-{
-  AwsFrameInfo *info = (AwsFrameInfo *)arg;
-  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
-  {
-    data[len] = 0;
-    if (strcmp((char *)data, "Start") == 0)
-    {
-      BuzzerTrigger();
-      sendingFlag = true;
-      loginFlag = true;
-      notifyClients();
-    }
-    else if (strcmp((char *)data, "Stop") == 0)
-    {
-      BuzzerTrigger();
-      sendingFlag = false;
-      loginFlag = false;
-      notifyClients();
-    }
-  }
-}
-
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-             void *arg, uint8_t *data, size_t len)
-{
-  switch (type)
-  {
-  case WS_EVT_CONNECT:
-    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-    break;
-  case WS_EVT_DISCONNECT:
-    Serial.printf("WebSocket client #%u disconnected\n", client->id());
-    break;
-  case WS_EVT_DATA:
-    handleWebSocketMessage(arg, data, len);
-    break;
-  case WS_EVT_PONG:
-  case WS_EVT_ERROR:
-    break;
-  }
-}
-void initWebSocket()
-{
-  ws.onEvent(onEvent);
-  server.addHandler(&ws);
-}
+void notifyClients();
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+void initWebSocket();
 
 /******************************************************************** SETUP ************************************************************************************/
 void setup()
@@ -211,7 +161,7 @@ void setup()
 /******************************************************************** LOOP *************************************************************************************/
 void loop()
 {
-  // ws.cleanupClients();
+  ws.cleanupClients();
   if (wifiButton.pressed)
   {
     WiFiHandle();
@@ -547,7 +497,7 @@ void LoRaHandle(void)
     LoRaConfig(NSS, RST, DI0);
   }
 
-  // Stop LoRa communication
+/* Stop LoRa communication */
   else if (loraButton.connect)
   {
     // Change the status of LoRa connection button
@@ -608,23 +558,6 @@ void IRAM_ATTR WiFiButtonEvent()
   BuzzerTrigger();
   wifiButton.pressed = true;
 }
-
-/* Login to Web API button event */
-// void IRAM_ATTR LoginButtonEvent()
-// {
-//   Delayms(50);
-//   BuzzerTrigger();
-//   sendingFlag = true;
-//   loginFlag = true;
-// }
-
-/* Stop sending to Web API button event */
-// void IRAM_ATTR UnsendButtonEvent()
-// {
-//   Delayms(50);
-//   BuzzerTrigger();
-//   sendingFlag = false;
-// }
 
 /* Send data to server */
 void SendDataToServer(double temperature)
@@ -879,3 +812,57 @@ DHT22Data LoRaReceive()
     }
     request->send(200, "text/plain", "Realtime request is sent successfully"); });
     }
+
+/* Websocket */
+AsyncWebSocket ws("/ws");
+void notifyClients()
+{
+  ws.textAll("Hello Browser");
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+{
+  AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+  {
+data[len] = 0;
+if (strcmp((char *)data, "Start") == 0)
+{
+  BuzzerTrigger();
+  sendingFlag = true;
+  loginFlag = true;
+  notifyClients();
+}
+else if (strcmp((char *)data, "Stop") == 0)
+{
+  BuzzerTrigger();
+  sendingFlag = false;
+  loginFlag = false;
+  notifyClients();
+}
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  switch (type)
+  {
+  case WS_EVT_CONNECT:
+Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+break;
+  case WS_EVT_DISCONNECT:
+Serial.printf("WebSocket client #%u disconnected\n", client->id());
+break;
+  case WS_EVT_DATA:
+handleWebSocketMessage(arg, data, len);
+break;
+  case WS_EVT_PONG:
+  case WS_EVT_ERROR:
+break;
+  }
+}
+void initWebSocket()
+{
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}

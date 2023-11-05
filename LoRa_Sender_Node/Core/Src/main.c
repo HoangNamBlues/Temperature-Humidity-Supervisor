@@ -141,11 +141,8 @@ int main(void)
 	{
 		// DHT22 doesn't response
 		// Re-Initilize again
-		Delay_Ms(1000);
+		Delay_Ms(200);
 	}
-
-	// Turn off the Alarm
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, SET);
 
 	// Initialize LCD
 	lcd_init();
@@ -175,7 +172,7 @@ int main(void)
 		lcd_put_cursor(0, 0);
 		lcd_send_string("Please try again!");
 	}
-	LoRa_startReceiving(&myLoRa); // initialize LoRa receive
+	LoRa_startReceiving(&myLoRa); // Start LoRa receive mode
 
   /* USER CODE END 2 */
 

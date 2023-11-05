@@ -29,3 +29,37 @@ Command-line arguments:  -os win32 -ws win32 -arch x86_64 D:\My-Projects\Git\The
 
 !ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2023-11-04 10:31:13.631
 !MESSAGE Started RMI Server, listening on port 41337
+!SESSION 2023-11-04 20:28:23.586 -----------------------------------------------
+eclipse.buildId=Version 1.13.1
+java.version=17.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_US
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -data D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2023-11-04 20:28:30.565
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2023-11-04 20:28:30.573
+!MESSAGE Log4j2 initialized with config file D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2023-11-04 20:28:39.318
+!MESSAGE Started RMI Server, listening on port 41337
+!SESSION 2023-11-04 20:29:26.632 -----------------------------------------------
+eclipse.buildId=Version 1.13.1
+java.version=17.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_US
+Framework arguments:  D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\.project
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\.project
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2023-11-04 20:29:33.119
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2023-11-04 20:29:33.122
+!MESSAGE Log4j2 initialized with config file D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2023-11-04 20:29:42.314
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.core.jobs 2 2 2023-11-04 20:30:00.228
+!MESSAGE Job found still running after platform shutdown.  Jobs should be canceled by the plugin that scheduled them during shutdown: org.eclipse.ui.internal.Workbench$39

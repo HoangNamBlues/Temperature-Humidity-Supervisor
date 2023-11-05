@@ -21,6 +21,7 @@ let humidityRealtimeFlag = 0;
 let socket = null;
 let esp32IP = "192.168.1.2:80";
 
+// State handler
 if (logFlag === "logged") {
   Unlock();
   $(".register-button").hide();
@@ -32,7 +33,6 @@ else {
   Block();
 }
 
-// Configuration
 // Google Chart API configuration
 // load current chart package
 google.charts.load("current", {
@@ -1192,7 +1192,7 @@ function WebsocketInit() {
   };
 }
 
-// Google Chart draw function
+/* Google Chart draw function */
 function drawChart() {
   // create data object with default value
   let data = google.visualization.arrayToDataTable([
