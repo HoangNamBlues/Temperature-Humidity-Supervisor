@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <string.h>
+#include <math.h>
 #include <SPI.h>          // SPI library
 #include <LoRa.h>         // LoRa library
 #include <WiFi.h>         // WiFI library
@@ -63,10 +64,15 @@ AsyncWebServer server(80);                                   // ESP32 server lis
 AsyncWebSocket ws("/ws");                                    // ESP32 websocket handle
 bool webserverFlag = false;                                  // flag to check whether esp32 was set as webserver
 bool realtimeFlag = false;                                   // flag to check the realtime mode
+double temperatureRange[2] = {0, 0};                         // array containing lowest and highest temperature level
+double humidityRange[2] = {0, 0};                            // array containing lowest and highest humidity level
+bool temperatureRangeFlag = false;                           // flag to check whether the website has sent the temperature range command
+bool humidityRangeFlag = false;                              // flag to check whether the website has sent the humidity range command
 const char *sourceId = "20";                                 // define the LoRa Id of this esp32 device
 const char *seperateCharacter = ",";                         // define the seperate character in the string of LoRa data
-bool cmdFlag = false;                                        // flag to check the command status
-bool buzzerCmdPressed = false;                               // flag to check whether the user has sent the command to turn ON buzzer
+bool cmdFlag = false;                                        // flag to check whether stm32 has finished the command
+uint8_t alarmCmd = 0;                                        // variable to check whether the user has sent the command to turn ON/OFF alarm
+bool alarm_status = 0;
 bool wsFlag = false;
 
 /* Function Prototype */
@@ -176,7 +182,6 @@ void loop()
   if (loraButton.connect)
   {
     data = LoRaReceive(); // receive dht22 data
-    Serial.println("\n\nReceived LoRa data\n\n");
   }
   OledDisplay(data.temp, data.humid);
   Delayms(10);
@@ -194,20 +199,51 @@ void loop()
     if (data.received == true)
     {
       // Check the command status
-      if (cmdFlag == false && buzzerCmdPressed == true)
+      if (cmdFlag == false)
       {
-        LoRaSend("10", "ON");
-        Serial.println("Keep sending command");
-        Delayms(10);
+        if (alarmCmd == 1)
+        {
+          LoRaSend("10", "1,ON");
+          Delayms(10);
+        }
+        else if (alarmCmd == 2)
+        {
+          LoRaSend("10", "1,OFF");
+          Delayms(10);
+        }
+        if (temperatureRangeFlag == true)
+        {
+          char message[20];
+          sprintf(message, "2,%0.1lf,%0.1lf", temperatureRange[0], temperatureRange[1]);
+          LoRaSend("10", message);
+          Delayms(10);
+        }
+        if (humidityRangeFlag == true)
+        {
+          char message[20];
+          sprintf(message, "3,%0.1lf,%0.1lf", humidityRange[0], humidityRange[1]);
+          LoRaSend("10", message);
+          Delayms(10);
+        }
       }
-      if (cmdFlag == true)
+      else if (cmdFlag == true)
       {
-        Serial.println("Sending command successfully");
+        if (alarmCmd == 1 || alarmCmd == 2)
+        {
+          alarmCmd = 0;
+        }
+        if (temperatureRangeFlag == true)
+        {
+          temperatureRangeFlag = false;
+        }
+        if (humidityRangeFlag == true)
+        {
+          humidityRangeFlag = false;
+        }
         ws.textAll("message,The command is sent successfully");
-        buzzerCmdPressed = false;
       }
       // POST data to webserver
-      if (sendingFlag == true && buzzerCmdPressed == false)
+      if (sendingFlag == true && alarmCmd == false)
       {
         if (millis() - lastSendTime > 5000)
         {
@@ -222,7 +258,7 @@ void loop()
       // PUSH data to the website directly
       if (realtimeFlag == true)
       {
-        String message = "data," + String(data.temp) + "," + String(data.humid);
+        String message = "data," + String(data.temp) + "," + String(data.humid) + "," + String(alarm_status);
         ws.textAll(message);
       }
       data.received = false;
@@ -687,6 +723,7 @@ DHT22Data LoRaReceive()
   char *temp;                          // pointer to temperature
   char *humid;                         // pointer to humidity
   char *cmdStatus;                     // pointer to command status
+  char *alarmStatus;                   // pointer to alarm status
   DHT22Data data = {0, 0, false};      // DHT22 data
   char rcvData[20];                    // array containing String of LoRa data
   char buffer[20];                     // array containing seperate components in array of LoRa data
@@ -706,7 +743,8 @@ DHT22Data LoRaReceive()
     rcvDesId = strtok(NULL, ",");                         // continue to return the pointer to the destination_id
     temp = strtok(NULL, ",");                             // continue to return the pointer to the temperature
     humid = strtok(NULL, ",");                            // continue to return the pointer to the humidity
-    cmdStatus = strtok(NULL, ",");                            // continue to return the pointer to the command status
+    cmdStatus = strtok(NULL, ",");                        // continue to return the pointer to the command status
+    alarmStatus = strtok(NULL, ",");                      // continue to return the pointer to the alarm status
 
     // Check if the destination_id is correct
     if (!strcmp(rcvDesId, sourceId))
@@ -730,12 +768,19 @@ DHT22Data LoRaReceive()
     if (!strcmp(cmdStatus, "1"))
     {
       cmdFlag = true;
-      // Serial.println("Command succeed");
     }
     else if (!strcmp(cmdStatus, "0"))
     {
       cmdFlag = false;
-      // Serial.println("Command fails");
+    }
+    // Check the alarm status
+    if (!strcmp(alarmStatus, "1"))
+    {
+      alarm_status = 1;
+    }
+    else if (!strcmp(alarmStatus, "0"))
+    {
+      alarm_status = 0;
     }
 
 // Serial Monitoring Verification
@@ -778,73 +823,142 @@ DHT22Data LoRaReceive()
 /* ESP32 Web Server configuration */
     void WebServerConfig()
     {
-      // Send a GET request to turn on/off the buzzer
-      server.on("/Buzzer", HTTP_GET, [](AsyncWebServerRequest *request)
-                {
-        String message;
-        if (request->hasParam("Status"))
+    // Send a GET request to turn on/off the alarm
+    server.on("/Alarm", HTTP_GET, [](AsyncWebServerRequest *request){
+      String message;
+      if (request->hasParam("Status"))
+      {
+        message = request->getParam("Status")->value();
+        if (message == "ON")
         {
-          message = request->getParam("Status")->value();
-          if (message == "ON")
-          {
-            buzzerCmdPressed = true;
-          }
-          else if (message == "OFF") 
-          {
-            // LoRaSend("10", "OFF");
-          }
-          else
-          {
-            Serial.println("Wrong message for led status command");
-          }
+          alarmCmd = 1;
+        }
+        else if (message == "OFF") 
+        {
+          alarmCmd = 2;
         }
         else
         {
-          message = "No message sent";
+          request->send(400, "text/plain", "Bad request");
         }
-        request->send(200, "text/plain", "Buzzer status command: " + message); });
-
-      // Send a GET request to login to asp.net webserver
-      server.on("/Start", HTTP_GET, [](AsyncWebServerRequest *request)
-                {
-    BuzzerTrigger();
-    sendingFlag = true;
-    loginFlag = true;
-    request->send(200, "text/plain", "Start request is sent successfully"); });
-
-      // Send a GET request to stop sending data to asp.net webserver
-      server.on("/Stop", HTTP_GET, [](AsyncWebServerRequest *request)
-                {
-    BuzzerTrigger();
-    sendingFlag = false;
-    loginFlag = false;
-    request->send(200, "text/plain", "Stop request is sent successfully"); });
-
-      // Send a GET request to open/close the realtime mode
-      server.on("/Realtime", HTTP_GET, [](AsyncWebServerRequest *request)
-                {
-    BuzzerTrigger();
-    String message;
-    if (request->hasParam("Status"))
-    {
-      message = request->getParam("Status")->value();
-      if (message == "ON")
-      {
-        realtimeFlag = true;
       }
-      else if (message == "OFF")
+      else
       {
-        realtimeFlag = false;
+        message = "No message sent";
       }
-    }
-    request->send(200, "text/plain", "Realtime request is sent successfully"); });
+      request->send(200, "text/plain", "Buzzer status command: " + message); }
+    );
+
+    // Send a GET request to login to asp.net webserver
+    server.on("/Start", HTTP_GET, [](AsyncWebServerRequest *request){
+      BuzzerTrigger();
+      sendingFlag = true;
+      loginFlag = true;
+      request->send(200, "text/plain", "Start request is sent successfully"); }
+    );
+
+    // Send a GET request to stop sending data to asp.net webserver
+    server.on("/Stop", HTTP_GET, [](AsyncWebServerRequest *request){
+      BuzzerTrigger();
+      sendingFlag = false;
+      loginFlag = false;
+      request->send(200, "text/plain", "Stop request is sent successfully"); }
+    );
+
+    // Send a GET request to open/close the realtime mode
+    server.on("/Realtime", HTTP_GET, [](AsyncWebServerRequest *request){
+      BuzzerTrigger();
+      String message;
+      if (request->hasParam("Status"))
+      {
+        message = request->getParam("Status")->value();
+        if (message == "ON")
+        {
+          realtimeFlag = true;
+        }
+        else if (message == "OFF")
+        {
+          realtimeFlag = false;
+        }
+      }
+      request->send(200, "text/plain", "Realtime request is sent successfully"); }
+    );
+
+    // Send a GET request to set the safe range for humidity/temperature
+    server.on("/TemperatureRange", HTTP_GET, [](AsyncWebServerRequest *request){
+      String lowest, highest;
+      double d;
+      if (request->hasParam("Lowest"))
+      {
+        lowest = request->getParam("Lowest")->value();
+        sscanf(lowest.c_str(), "%lf", &d);
+        temperatureRange[0] = d;
+      }
+      else
+      {
+        temperatureRangeFlag = false;
+        request->send(400, "text/plain", "Bad request");
+      }
+      if (request->hasParam("Highest"))
+      {
+        highest = request->getParam("Highest")->value();
+        sscanf(highest.c_str(), "%lf", &d);
+        temperatureRange[1] = d;
+      }
+      else
+      {
+        temperatureRangeFlag = false;
+        request->send(400, "text/plain", "Bad request");
+      }
+      if (temperatureRange[1] < temperatureRange[0])
+      {
+        temperatureRangeFlag = false;
+        request->send(400, "text/plain", "Bad request");
+      }
+      temperatureRangeFlag = true;
+      request->send(200, "text/plain", "Received request successfully");}
+    );
+
+    server.on("/HumidityRange", HTTP_GET, [](AsyncWebServerRequest *request){
+      String lowest, highest;
+      double d;
+      if (request->hasParam("Lowest"))
+      {
+        lowest = request->getParam("Lowest")->value();
+        sscanf(lowest.c_str(), "%lf", &d);
+        humidityRange[0] = d;
+      }
+      else
+      {
+        humidityRangeFlag = false;
+        request->send(400, "text/plain", "Bad request");
+      }
+      if (request->hasParam("Highest"))
+      {
+        highest = request->getParam("Highest")->value();
+        sscanf(highest.c_str(), "%lf", &d);
+        humidityRange[1] = d;
+      }
+      else
+      {
+        humidityRangeFlag = false;
+        request->send(400, "text/plain", "Bad request");
+      }
+      if (humidityRange[1] < humidityRange[0])
+      {
+        humidityRangeFlag = false;
+        request->send(400, "text/plain", "Bad request");
+      }
+      humidityRangeFlag = true;
+      request->send(200, "text/plain", "Received request successfully"); }
+    );
     }
 
 /* Websocket */
-void notifyClients()
-{
-  ws.textAll("Hello Browser");
-}
+// void notifyClients()
+// {
+//   ws.textAll("Hello Browser");
+// }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
@@ -852,20 +966,20 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
 data[len] = 0;
-if (strcmp((char *)data, "Start") == 0)
-{
-  BuzzerTrigger();
-  sendingFlag = true;
-  loginFlag = true;
-  notifyClients();
-}
-else if (strcmp((char *)data, "Stop") == 0)
-{
-  BuzzerTrigger();
-  sendingFlag = false;
-  loginFlag = false;
-  notifyClients();
-}
+// if (strcmp((char *)data, "Start") == 0)
+// {
+//   BuzzerTrigger();
+//   sendingFlag = true;
+//   loginFlag = true;
+//   notifyClients();
+// }
+// else if (strcmp((char *)data, "Stop") == 0)
+// {
+//   BuzzerTrigger();
+//   sendingFlag = false;
+//   loginFlag = false;
+//   notifyClients();
+// }
   }
 }
 

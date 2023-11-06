@@ -18,6 +18,7 @@ let realtimeHumidity = null;
 let socketData = [0];
 let socket = null;                                          // Websocket handle
 let esp32IP = null;                                         // IP address of esp32 
+let alarmStatus = null;                                     // status of the alarm on stm32f1
 
 // Google Chart API configuration
 // load current chart package
@@ -35,6 +36,7 @@ google.charts.setOnLoadCallback(DrawHumidityChart);
 // Other configuration
 $(".option-button").css("color", "rgb(203, 29, 29)");
 $(".user-name").text("");
+$(".buzzer-state").text("NA");
 
 // Hide some element at the beginning
 $(".filter-table-div").hide();
@@ -78,7 +80,7 @@ function ShowLoginPassword() {
   });
 }
 
-// Add click event for temperature button
+// Add click event for temperature button to set the temperature safe range 
 $(".temperature-button").click(function () {
   if ($(".temperature-button").hasClass("not-allow")) {
     var audio = new Audio("./Audio/error-click.mp3");
@@ -86,10 +88,13 @@ $(".temperature-button").click(function () {
   } else {
     var audio = new Audio("./Audio/classic-click.mp3");
     audio.play();
+    const lowest = $(".temperature-lowest")[0].value;
+    const highest = $(".temperature-highest")[0].value;
+    TemperatureRange(lowest, highest);
   }
 });
 
-// Add click event for humidity button
+// Add click event for humidity button to set the humidity safe range 
 $(".humidity-button").click(function () {
   if ($(".humidity-button").hasClass("not-allow")) {
     var audio = new Audio("./Audio/error-click.mp3");
@@ -97,6 +102,9 @@ $(".humidity-button").click(function () {
   } else {
     var audio = new Audio("./Audio/classic-click.mp3");
     audio.play();
+    const lowest = $(".humidity-lowest")[0].value;
+    const highest = $(".humidity-highest")[0].value;
+    HumidityRange(lowest, highest);
   }
 });
 
@@ -180,16 +188,21 @@ $(".option-button").click(function () {
 });
 
 // Add click event for side bar buttons using Jquery
-// Buzzer button
+// Alarm button
 $(".buzzer-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  if ($(".buzzer-state").text() === "OFF") {
-    $(".buzzer-state").text("ON");
-    BuzzerHandle("ON");
-  } else {
-    $(".buzzer-state").text("OFF");
-    // BuzzerHandle("OFF");
+  // if ($(".buzzer-state").text() === "OFF") {
+  //   $(".buzzer-state").text("ON");
+  //   AlarmHandle("ON");
+  // } else {
+  //   $(".buzzer-state").text("OFF");
+  //   AlarmHandle("OFF");
+  // }
+  if (alarmStatus === "OFF") {
+    AlarmHandle("ON");
+  } else if (alarmStatus === "ON") {
+    AlarmHandle("OFF");
   }
 });
 // Expand button
@@ -975,16 +988,16 @@ function Unlock() {
   $(".percents-text").removeClass("not-allow");
 }
 
-/* Function to turn on/off all the buzzer */
-async function BuzzerHandle(option) {
+/* Function to turn on/off the alarm */
+async function AlarmHandle(option) {
   if (option === "OFF") {
     /* Send command to ESP32 Web Server to turn off the buzzer */
-    await fetch(`http://${esp32IP}/Buzzer?Status=OFF`, {
+    await fetch(`http://${esp32IP}/Alarm?Status=OFF`, {
       mode: "no-cors"
     });
   } else if (option === "ON") {
     /* Send command to ESP32 Web Server to turn on the buzzer */
-    await fetch(`http://${esp32IP}/Buzzer?Status=ON`, {
+    await fetch(`http://${esp32IP}/Alarm?Status=ON`, {
       mode: "no-cors"
     });
   }
@@ -1008,6 +1021,20 @@ async function SendHandle(option) {
 /* Function to turn on realtime mode */
 async function RealtimeMode(status) { 
   await fetch(`http://${esp32IP}:80/Realtime?Status=${status}`, {
+    mode: "no-cors"
+  });
+}
+
+/* Function to send the safe range of temperature to esp32 */
+async function TemperatureRange(lowest, highest) { 
+  await fetch(`http://${esp32IP}:80/TemperatureRange?Lowest=${lowest}&Highest=${highest}`, {
+    mode: "no-cors"
+  });
+}
+
+/* Function to send the safe range of humidity to esp32 */
+async function HumidityRange(lowest, highest) { 
+  await fetch(`http://${esp32IP}:80/HumidityRange?Lowest=${lowest}&Highest=${highest}`, {
     mode: "no-cors"
   });
 }
@@ -1164,10 +1191,16 @@ function WebsocketInit(esp32IP) {
     if (socketData[0] === "data") {
       $(".temperature-result").text(socketData[1]);
       realtimeTemperature = parseFloat(socketData[1]);
-    }
-    if (socketData[0] === "data") {
       $(".humidity-result").text(socketData[2]);
       realtimeHumidity = parseFloat(socketData[2]);
+      if (socketData[3] === "1") {
+        alarmStatus = "ON";
+        $(".buzzer-state").text("ON");
+      }
+      else if (socketData[3] === "0") { 
+        alarmStatus = "OFF";
+        $(".buzzer-state").text("OFF");
+      }
     }
     if (socketData[0] === "message") { 
       alert(socketData[1]);

@@ -73,6 +73,7 @@ double humid_setpoint[2] = {60.0, 80.0};	// array containing lowest and highest 
 uint8_t dht22Status = 0;					// variable to check whether the dht22 data is received successfully
 uint8_t loraStatus = 0;						// variable to check whether the LoRa data is transmitted successfully
 int cmdStatus = 0;							// variable to check whether the command is processed successfully
+int alarmStatus = 0;						// alarm status
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,7 +86,7 @@ static void MX_I2C1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
-void Packet_Encapsulation(char* buffer, int src_id, int des_id, double temp, double humid, int cmd_status);
+void Packet_Encapsulation(char* buffer, int src_id, int des_id, double temp, double humid, int cmd_status, int alarm_status);
 void Lcd_Sytem_State_Print(uint8_t mode);
 void Long_Pressed_Button(void);
 void Alarm_Check(double temp, double humid);
@@ -174,6 +175,9 @@ int main(void)
 	}
 	LoRa_startReceiving(&myLoRa); // Start LoRa receive mode
 
+	// Turn off the alarm mode
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -186,7 +190,7 @@ int main(void)
 		/* DHT22 get data */
 		dht22Status = DHT22_Get_Data(&dht22Data);
 		/* LoRa sending */
-		Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus);
+		Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus, alarmStatus);
 		// Stop Timer 4
 		HAL_TIM_Base_Stop_IT(&htim4);
 		// LoRa sending data
@@ -629,12 +633,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		// BUZZER_BUTTON pressed
 		case BUZZER_BUTTON_Pin:
 			// Toggle the built-in LED, changing the alarm status
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 			// Check if the alarm is turned OFF
-			if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
+			if(HAL_GPIO_ReadPin(LED_GPIO_Port, LED_Pin))
 			{
 				// clear the LCD screen
 				lcd_clear();
+				alarmStatus = 0;
+			}
+			else
+			{
+				alarmStatus = 1;
 			}
 			break;
 
@@ -694,9 +703,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 // Encapsulate the data into a packet containing the string: "source_id,destination_id,temperature,humidity"
-void Packet_Encapsulation(char* buffer ,int src_id, int des_id, double temp, double humid, int cmd_status)
+void Packet_Encapsulation(char* buffer ,int src_id, int des_id, double temp, double humid, int cmd_status, int alarm_status)
 {
-	sprintf(buffer, "%d,%d,%0.1lf,%0.1lf,%d", src_id, des_id, temp, humid,cmd_status);
+	sprintf(buffer, "%d,%d,%0.1lf,%0.1lf,%d,%d", src_id, des_id, temp, humid,cmd_status,alarm_status);
 }
 
 // System state LCD print
@@ -943,10 +952,10 @@ void Long_Pressed_Button(void)
 void Alarm_Check(double temp, double humid)
 {
 	// Check if the alarm is turned ON
-	if(!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
+	if(!HAL_GPIO_ReadPin(LED_GPIO_Port, LED_Pin))
 	{
 		// Check the temperature value
-		while(temp > temp_setpoint[1] && !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
+		if(temp > temp_setpoint[1])
 		{
 			// The temperature is too HIGH
 			Buzzer_Trigger();
@@ -955,9 +964,9 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too high");
 			lcd_put_cursor(1, 2);
 			lcd_send_string("Temperature");
-			Delay_Ms(500);
+			Delay_Ms(200);
 		}
-		while(temp < temp_setpoint[0] && !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
+		if(temp < temp_setpoint[0])
 		{
 			// The temperature is too LOW
 			Buzzer_Trigger();
@@ -966,11 +975,11 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too low");
 			lcd_put_cursor(1, 2);
 			lcd_send_string("Temperature");
-			Delay_Ms(500);
+			Delay_Ms(200);
 		}
 
 		// Check the humidity value
-		while(humid > humid_setpoint[1] && !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
+		if(humid > humid_setpoint[1])
 		{
 			// The humidity is too HIGH
 			Buzzer_Trigger();
@@ -979,9 +988,9 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too high");
 			lcd_put_cursor(1, 4);
 			lcd_send_string("Humidity");
-			Delay_Ms(500);
+			Delay_Ms(200);
 		}
-		while(humid < humid_setpoint[0] && !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13))
+		if(humid < humid_setpoint[0])
 		{
 			// The humidity is too LOW
 			Buzzer_Trigger();
@@ -990,7 +999,7 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too low");
 			lcd_put_cursor(1, 4);
 			lcd_send_string("Humidity");
-			Delay_Ms(500);
+			Delay_Ms(200);
 		}
 	}
 }
@@ -1000,23 +1009,56 @@ void LoRa_Receive_Handle()
 {
 	char *rcvSrcId;		// pointer to source ID
 	char *rcvDesId;		// pointer to destination ID
-	char *message;		// pointer to received message
+	char *cmdType;			// pointer to received message
 
-	rcvSrcId = strtok(received_data, ",");                // return the pointer to the source_id
-	rcvDesId = strtok(NULL, ",");                         // continue to return the pointer to the destination_id
-	message = strtok(NULL, ","); 						  // continue to return the pointer to the received message
+	rcvSrcId = strtok(received_data, ",");            	// return the pointer to the source_id
+	rcvDesId = strtok(NULL, ",");                     	// continue to return the pointer to the destination_id
+	cmdType = strtok(NULL, ","); 						// continue to return the pointer to the received command type
 
 	// Check if the destination ID is correct
 	if(!strcmp(rcvDesId, srcId))
 	{
-		if (!strcmp(message,"ON"))
+		if (!strcmp(cmdType,"1"))
 		{
-			Buzzer_Trigger();
+			char *status; // pointer to the received buzzer status
+			status = strtok(NULL, ","); // continue to return the pointer to the received buzzer status
+			if (!strcmp(status, "ON"))
+			{
+				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+				cmdStatus = 1;
+				alarmStatus = 1;
+			}
+			else if (!strcmp(status, "OFF"))
+			{
+				HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+				cmdStatus = 1;
+				alarmStatus = 0;
+			}
+		}
+		else if (!strcmp(cmdType, "2"))
+		{
+			char *tempLowest; 	// pointer to the received lowest temperature level
+			char *tempHighest;	// pointer to the received highest temperature level
+			tempLowest = strtok(NULL, ","); // continue to return the pointer to the received lowest temperature level
+			tempHighest = strtok(NULL, ","); // continue to return the pointer to the received highest temperature level
+			double d;
+			sscanf(tempLowest, "%lf", &d);
+			temp_setpoint[0] = d;
+			sscanf(tempHighest, "%lf", &d);
+			temp_setpoint[1] = d;
 			cmdStatus = 1;
 		}
-		else if (!strcmp(message, "OFF"))
+		else if (!strcmp(cmdType, "3"))
 		{
-			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+			char *humidLowest; 	// pointer to the received lowest humidity level
+			char *humidHighest;	// pointer to the received highest humidity level
+			humidLowest = strtok(NULL, ","); // continue to return the pointer to the received lowest humidity level
+			humidHighest = strtok(NULL, ","); // continue to return the pointer to the received highest humdity level
+			double d;
+			sscanf(humidLowest, "%lf", &d);
+			humid_setpoint[0] = d;
+			sscanf(humidHighest, "%lf", &d);
+			humid_setpoint[1] = d;
 			cmdStatus = 1;
 		}
 	}
