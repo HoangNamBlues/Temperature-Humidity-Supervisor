@@ -165,6 +165,7 @@ $(".login-button").dblclick(function () {
     $(".open-filter-button").text("Open Filter");
     $("table tr").remove(".value-rows");
     Block();
+    alert("Logout sucessfully");
   }
 });
 
@@ -218,7 +219,7 @@ $(".search-button").click(function () {
   $("table tr").remove(".value-rows"); // clear the row values of filter table
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  const searchInput = $(".side-bar-field input");
+  const searchInput = $(".date-search");
   const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
   SearchByDate(date);
 });
@@ -226,7 +227,7 @@ $(".search-button").click(function () {
 $(".average-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  const searchInput = $(".side-bar-field input");
+  const searchInput = $(".date-search");
   const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
   Average(date);
 });

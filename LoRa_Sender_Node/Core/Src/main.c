@@ -1014,6 +1014,11 @@ void LoRa_Receive_Handle()
 			Buzzer_Trigger();
 			cmdStatus = 1;
 		}
+		else if (!strcmp(message, "OFF"))
+		{
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+			cmdStatus = 1;
+		}
 	}
 }
 

@@ -311,9 +311,9 @@ form select:hover {
   display: flex;
   margin-left: 20px;
 }
-.temperature-display-div {
+.temperature-set-div {
   display: flex;
-  margin-left: 50px;
+  margin-left: 20px;
 }
 .degrees-text-div {
   display: flex;
@@ -326,9 +326,9 @@ form select:hover {
   display: flex;
   margin-left: 20px;
 }
-.humidity-display-div {
+.humidity-set-div {
   display: flex;
-  margin-left: 50px;
+  margin-left: 20px;
 }
 .percents-text-div {
   display: flex;
@@ -347,13 +347,15 @@ form select:hover {
 }
 
 /* Edit the place to display the temperature result */
-.temperature-result {
-  color: rgb(217, 12, 12);
+.temperature-set {
   border-radius: 30px;
-  font-size: 50px;
+  font-size: 20px;
   font-weight: bold;
+  width: 250px;
+  height: 50px;
+  padding-left: 35px;
+  border: none;
 }
-
 /* Edit the text for displaying temperature unit */
 .degrees-text {
   color: rgb(217, 12, 12);
@@ -372,11 +374,15 @@ form select:hover {
 }
 
 /* Edit the place to display the humidity result */
-.humidity-result {
-  color: rgb(28, 70, 222);
+.humidity-set {
+  /* background-color: rgb(222, 99, 99); */
   border-radius: 30px;
-  font-size: 50px;
+  font-size: 20px;
   font-weight: bold;
+  width: 250px;
+  height: 50px;
+  padding-left: 35px;
+  border: none;
 }
 
 /* Edit the text for displaying humidity unit */
