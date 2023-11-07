@@ -28,8 +28,8 @@
 #define WIRE Wire
 // Define the pin for Buzzer
 #define BUZZER 33
-// Define the pin button for sending data to server
-#define LOGINBUTTON 21
+
+#define WIFIRESETBUTTON 21 // button to reset (or clear all the stored wifi credentials )
 #define UNSENDBUTTON 17
 
 /* DHT22 datatype */
@@ -58,6 +58,7 @@ String jwtToken = "";                                        // JWT token variab
 DHT22Data data = {0, 0, false};                              // DHT22 received data
 ConnectButton wifiButton = {false, false, false, 22};        // button to connect/disconnect wifi
 ConnectButton loraButton = {false, false, false, 32};        // button to connect/disconnect lora
+bool wifiResetFlag = false;                                  // flag to check whether the wifi reset button was pressed
 bool sendingFlag = false;                                    // flag to identify whether esp32 sends data to web api or not
 bool loginFlag = false;                                      // flag to identify whether you have logan or not
 AsyncWebServer server(80);                                   // ESP32 server listening on port 80
@@ -73,7 +74,6 @@ const char *seperateCharacter = ",";                         // define the seper
 bool cmdFlag = false;                                        // flag to check whether stm32 has finished the command
 uint8_t alarmCmd = 0;                                        // variable to check whether the user has sent the command to turn ON/OFF alarm
 bool alarm_status = 0;
-bool wsFlag = false;
 
 /* Function Prototype */
 // LED
@@ -95,8 +95,7 @@ void WebServerConfig();                             // ESP32 WebServer configura
 // Interrupt Service Routine
 void IRAM_ATTR WiFiButtonEvent();     // Button interrupt handler
 void IRAM_ATTR LoRaButtonEvent();     // Button interrupt handler
-void IRAM_ATTR LoginButtonEvent();    // Button interrupt handler
-void IRAM_ATTR UnsendButtonEvent();   // Button interrupt handler
+void IRAM_ATTR WiFiResetEvent();    // Button interrupt handler
 // Buzzer
 void BuzzerTrigger(); // Buzzer trigger
 // Delay
@@ -151,16 +150,14 @@ void setup()
   pinMode(BLUE, OUTPUT);
   pinMode(GREEN, OUTPUT);
 
-  // Initialize Connect Button
+  // Initialize Interrupt Button
   pinMode(wifiButton.pinNumber, INPUT_PULLUP);
   pinMode(loraButton.pinNumber, INPUT_PULLDOWN);
-  // pinMode(LOGINBUTTON, INPUT_PULLUP);
-  // pinMode(UNSENDBUTTON, INPUT_PULLUP);
+  pinMode(WIFIRESETBUTTON, INPUT_PULLUP);
   // Attach the interrupt event
   attachInterrupt(wifiButton.pinNumber, WiFiButtonEvent, FALLING);
+  attachInterrupt(WIFIRESETBUTTON, WiFiResetEvent, FALLING);
   attachInterrupt(loraButton.pinNumber, LoRaButtonEvent, CHANGE);
-  // attachInterrupt(LOGINBUTTON, LoginButtonEvent, FALLING);
-  // attachInterrupt(UNSENDBUTTON, UnsendButtonEvent, FALLING);
  
   // Webserver configuration
   initWebSocket();
@@ -171,19 +168,30 @@ void setup()
 void loop()
 {
   ws.cleanupClients();
+  // Check whether user has pressed the wifi reset button
+  if (wifiResetFlag == true)
+  {
+    // WiFi manager initialization
+    WiFiManager wm;     // WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
+    wm.resetSettings(); // reset settings - wipe stored credentials
+    wifiResetFlag = false;
+  }
+  // Check whether user has pressed wifi connect/disconnect button
   if (wifiButton.pressed)
   {
     WiFiHandle();
   }
+  // Check whether user has pressed lora connect/disconnect button
   if (loraButton.pressed)
   {
     LoRaHandle();
   }
+  // Receive data from stm32f1 over LoRa
   if (loraButton.connect)
   {
     data = LoRaReceive(); // receive dht22 data
   }
-  OledDisplay(data.temp, data.humid);
+  OledDisplay(data.temp, data.humid); // display data on OLED
   Delayms(10);
   if (wifiButton.connect == true)
   {
@@ -247,12 +255,10 @@ void loop()
       {
         if (millis() - lastSendTime > 5000)
         {
-          Serial.println("Start sending to web api");
           PostTemperature(data.temp, jwtToken);
           Delayms(10);
           PostHumidity(data.humid, jwtToken);
           lastSendTime = millis();
-          Serial.println("Stop sending to web api");
         }
       }
       // PUSH data to the website directly
@@ -432,7 +438,6 @@ void WiFiHandle()
   {
     // WiFi manager initialization
     WiFiManager wm; // WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
-    // wm.resetSettings(); // reset settings - wipe stored credentials
 
     // Automatically connect using saved credentials,
     // if connection fails, it starts an access point with the specified name ( "AutoConnectAP"),
@@ -440,6 +445,10 @@ void WiFiHandle()
     // then goes into a blocking loop awaiting configuration and will return success result
 
     bool res;
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("WiFi Connecting ...");
+    display.display();
     res = wm.autoConnect("ESP32WiFiManager", "esp32wifimanager"); // password protected ap
 
     // Display WiFi connection on the OLED
@@ -452,12 +461,13 @@ void WiFiHandle()
       display.println("ESP32 WiFi");
       display.display();
       Delayms(1000);
-      // ESP.restart(); reset the ESP32 MCU
 
       // Change the status of the WiFi connection button
       wifiButton.connect = false;
       wifiButton.disconnect = false;
       wifiButton.pressed = false;
+
+      // ESP.restart(); reset the ESP32 MCU
     }
     else
     {
@@ -605,26 +615,12 @@ void IRAM_ATTR WiFiButtonEvent()
   wifiButton.pressed = true;
 }
 
-/* Send data to server */
-void SendDataToServer(double temperature)
+/* WiFi reset button pressed event */
+void IRAM_ATTR WiFiResetEvent()
 {
-  int postRequestCount;
-  /* Wrapping functions in a delay implementation without stopping to wait them */
-  if ((millis() - lastTime) > 1000)
-  {
-    if (postRequestCount < 10)
-    {
-      // double temperature = random(2000, 3500) / 100.00; // create random double value from 20 --> 35
-      PostTemperature(temperature, jwtToken);
-      postRequestCount++;
-    }
-    else
-    {
-      Serial.println("Request Stopped");
-      RGBLedConfig('R');
-    }
-    lastTime = millis(); // update lastTime variable with current time in milisecond
-  }
+  Delayms(50);
+  BuzzerTrigger();
+  wifiResetFlag = true;
 }
 
 /* Buzzer trigger */
@@ -955,11 +951,6 @@ DHT22Data LoRaReceive()
     }
 
 /* Websocket */
-// void notifyClients()
-// {
-//   ws.textAll("Hello Browser");
-// }
-
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
