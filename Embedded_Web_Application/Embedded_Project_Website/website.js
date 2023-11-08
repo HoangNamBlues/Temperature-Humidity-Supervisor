@@ -2,6 +2,7 @@
 
 // Global variable
 let jwtToken = localStorage.getItem("jwtToken");
+let refreshToken = localStorage.getItem("refreshToken");
 let logFlag = localStorage.getItem("logFlag");
 let userName = localStorage.getItem("userName");
 let timeFilterFlag = 0;
@@ -44,7 +45,7 @@ $("form").hide();
 $(".side-bar").hide();
 if (logFlag === "logged") {
   Unlock();
-  $(".register-button").hide();
+  $(".register-button").text("Refresh");
   $(".login-button").text("Logout");
   $(".user-name").text(userName);
 }
@@ -119,6 +120,10 @@ $(".register-button").click(function () {
     $(".login-button").text("Close");
     $(".register-form").fadeIn();
     registerFlag = 1;
+  }
+  else if ($(".register-button").text() == "Refresh")
+  { 
+    Refresh();
   }
   // Confirm button
   else {
@@ -787,16 +792,22 @@ async function Login() {
     $("form").hide();
     const result = await response.json();
     jwtToken = result.jwtToken;
+    refreshToken = result.refreshToken;
     userName = result.userName;
     localStorage.setItem("jwtToken", jwtToken);
+    localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("userName", userName);
     $(".user-name").text(userName);
     localStorage.setItem("logFlag", "logged");
     ClearTextHtml(loginInput);
     alert("Successful login");
     Unlock();
-    $(".register-button").hide();
+    $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
+    setTimeout(() => {
+      alert("Your JWT Token was expired. please refresh a new token!");
+      Block();
+    }, 900000);
   }
 }
 
@@ -837,16 +848,63 @@ async function Register() {
     $("form").hide();
     const result = await response.json();
     jwtToken = result.jwtToken;
+    refreshToken = result.refreshToken;
     userName = result.userName;
     localStorage.setItem("jwtToken", jwtToken);
+    localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("userName", userName);
     $(".user-name").text(userName);
     localStorage.setItem("logFlag", "logged");
     ClearTextHtml(registerInput);
     alert("Successful register");
     Unlock();
-    $(".register-button").hide();
+    $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
+    setTimeout(() => {
+      alert("Your JWT Token was expired. please refresh a new token!");
+      Block();
+    }, 900000);
+  }
+}
+
+/* Function to refresh JWT token */
+async function Refresh() {
+  // Refresh token form data
+  loginForm = new FormData();
+  loginForm.append("JwtToken", localStorage.getItem("jwtToken"));
+  loginForm.append("RefreshToken", localStorage.getItem("refreshToken"));
+
+  // Converting form data to a plain object
+  const plainFormData = Object.fromEntries(loginForm.entries());
+
+  // Converting plain object to a Json string
+  formDataJsonString = JSON.stringify(plainFormData);
+  // POST request to register user
+  const response = await fetch(
+    "https://localhost:5000/Account/Generate-New-Jwt-Token",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json, text/plain",
+        "Content-Type": "application/json, charset=UTF-8",
+      },
+      body: formDataJsonString,
+    }
+  );
+  if (!(response.status == "200")) {
+    alert("Fail to refresh a new JWT Token, please try again!");
+  } else {
+    const result = await response.json();
+    jwtToken = result.jwtToken;
+    refreshToken = result.refreshToken;
+    localStorage.setItem("jwtToken", jwtToken);
+    localStorage.setItem("refreshToken", refreshToken);
+    alert("Successful refresh a new JWT Token");
+    Unlock();
+    setTimeout(() => {
+      alert("Your JWT Token was expired. please refresh a new token!");
+      Block();
+    }, 900000);
   }
 }
 

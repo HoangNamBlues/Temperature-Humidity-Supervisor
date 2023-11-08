@@ -87,8 +87,8 @@ DHT22Data LoRaReceive();                    // LoRa receive data
 void WiFiHandle(); // Handle with WiFi connection
 // HTTP request
 double GetLatestTemperature(String jwtToken);       // Get the latest temperature value in the database
-bool PostTemperature(double temp, String jwtToken); // Add a new temperature value to the database
-bool PostHumidity(double humid, String jwtToken);   // Add a new temperature value to the database
+bool PostTemperature(double temp); // Add a new temperature value to the database
+bool PostHumidity(double humid);   // Add a new temperature value to the database
 void SendDataToServer(double temperature);          // Send data to server
 String PostLogin();                                 // Login as an admin
 void WebServerConfig();                             // ESP32 WebServer configuration
@@ -195,14 +195,6 @@ void loop()
   Delayms(10);
   if (wifiButton.connect == true)
   {
-    // Check if esp32 was logan
-    if (loginFlag == true)
-    {
-      // Get JWT Token
-      jwtToken = PostLogin();
-      Serial.println(jwtToken);
-      loginFlag = false;
-    }
     // Check if esp32 has received LoRa data
     if (data.received == true)
     {
@@ -255,9 +247,9 @@ void loop()
       {
         if (millis() - lastSendTime > 5000)
         {
-          PostTemperature(data.temp, jwtToken);
+          PostTemperature(data.temp);
           Delayms(10);
-          PostHumidity(data.humid, jwtToken);
+          PostHumidity(data.humid);
           lastSendTime = millis();
         }
       }
@@ -323,22 +315,18 @@ double GetLatestTemperature(String jwtToken)
 }
 
 /* POST a new temperature value to the database */
-bool PostTemperature(double temp, String jwtToken)
+bool PostTemperature(double temp)
 {
   /* Post request url */
-  String postTemperatureUrl = "https://" + backendIP + "/Api/Temperature/AddTemperature/";
+  String postTemperatureUrl = "https://" + backendIP + "/Api/Temperature/ESP32/AddTemperature/";
   String strbuff = String(temp, 2);                  // Convert double type to string type temperature
   postTemperatureUrl = postTemperatureUrl + strbuff; // Add temperature string to Post Url string
   Serial.print("POST request url: ");
   Serial.println(postTemperatureUrl);
 
   /* Begin to send POST request to the server */
-  String auth = "Bearer " + jwtToken;
-  Serial.print("POST request header: ");
-  Serial.println(auth);
   HTTPClient http;
   http.begin(postTemperatureUrl);
-  http.addHeader("Authorization", auth);
   int responseCode = http.POST("");
   if (responseCode > 0)
   {
@@ -357,22 +345,18 @@ bool PostTemperature(double temp, String jwtToken)
 }
 
 /* POST a new humidity value to the database */
-bool PostHumidity(double humid, String jwtToken)
+bool PostHumidity(double humid)
 {
   /* Post request url */
-  String postTemperatureUrl = "https://" + backendIP + "/Api/Humidity/AddHumidity/";
+  String postTemperatureUrl = "https://" + backendIP + "/Api/Humidity/ESP32/AddHumidity/";
   String strbuff = String(humid, 2);                 // Convert double type to string type humidity
   postTemperatureUrl = postTemperatureUrl + strbuff; // Add humidity string to Post Url string
   Serial.print("POST request url: ");
   Serial.println(postTemperatureUrl);
 
   /* Begin to send POST request to the server */
-  String auth = "Bearer " + jwtToken;
-  Serial.print("POST request header: ");
-  Serial.println(auth);
   HTTPClient http;
   http.begin(postTemperatureUrl);
-  http.addHeader("Authorization", auth);
   int responseCode = http.POST("");
   if (responseCode > 0)
   {
@@ -845,11 +829,10 @@ DHT22Data LoRaReceive()
       request->send(200, "text/plain", "Buzzer status command: " + message); }
     );
 
-    // Send a GET request to login to asp.net webserver
+    // Send a GET request to start sending data to asp.net webserver
     server.on("/Start", HTTP_GET, [](AsyncWebServerRequest *request){
       BuzzerTrigger();
       sendingFlag = true;
-      loginFlag = true;
       request->send(200, "text/plain", "Start request is sent successfully"); }
     );
 
@@ -857,7 +840,6 @@ DHT22Data LoRaReceive()
     server.on("/Stop", HTTP_GET, [](AsyncWebServerRequest *request){
       BuzzerTrigger();
       sendingFlag = false;
-      loginFlag = false;
       request->send(200, "text/plain", "Stop request is sent successfully"); }
     );
 

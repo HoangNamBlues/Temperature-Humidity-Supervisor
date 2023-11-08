@@ -102,8 +102,7 @@ namespace WebApi.Controllers
 
         /* Add the new humidity value request */
         [HttpPost]
-        [Authorize(Roles = "Admin")]
-        [Route("AddHumidity/{value:double}")]
+        [Route("ESP32/AddHumidity/{value:double}")]
         public async Task<IActionResult> Addhumidity([FromRoute] double value)
         {
             var status = await humidityAdderService.AddHumidity(value);
@@ -116,10 +115,10 @@ namespace WebApi.Controllers
         /* Delete the humidity value by date */
         [HttpDelete]
         [Authorize(Roles = "Admin")]
-        [Route("Delete/{time}")]
-        public async Task<IActionResult> Deletehumidity([FromRoute] string time)
+        [Route("Delete/{date}")]
+        public async Task<IActionResult> Deletehumidity([FromRoute] string date)
         {
-            List<HumiditySensor> humidityList = await humidityRemoverService.DeleteHumidityByTime(time);
+            List<HumiditySensor> humidityList = await humidityRemoverService.DeleteHumidityByTime(date);
             if (!humidityList.Any())
                 return NotFound();
             else

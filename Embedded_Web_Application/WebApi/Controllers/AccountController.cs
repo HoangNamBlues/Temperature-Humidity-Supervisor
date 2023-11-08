@@ -149,7 +149,7 @@ namespace WebApi.Controllers
         /* Action to delete a user from Identity Database by the user's email */
         [HttpDelete]
         [Authorize(Roles = "Admin")]
-        [Route("DeleteUser/")]
+        [Route("DeleteUser")]
         public async Task<IActionResult> DeleteUser([FromQuery] string userEmail) {
             if (userEmail == null)
                 return BadRequest("Please enter the User's email in the request");
@@ -162,7 +162,7 @@ namespace WebApi.Controllers
 
         /* Action to generate a new jwt token from the refresh token */
         [HttpPost]
-        [Route("Generate-New-Jwt-Token/")]
+        [Route("Generate-New-Jwt-Token")]
         public async Task<IActionResult> GenerateNewJwtToken(TokenModelRequest tokenModelRequest)
         {
             if (tokenModelRequest == null)

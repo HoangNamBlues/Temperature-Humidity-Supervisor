@@ -103,8 +103,7 @@ namespace WebApi.Controllers
 
         /* Add the new temperature value request */
         [HttpPost]
-        [Authorize(Roles = "Admin")]
-        [Route("AddTemperature/{value:double}")]
+        [Route("ESP32/AddTemperature/{value:double}")]
         public async Task<IActionResult> AddTemperature([FromRoute] double value)
         {
             var status = await temperatureAdderService.AddTemperature(value);
@@ -117,10 +116,10 @@ namespace WebApi.Controllers
         /* Delete the temperature value by date */
         [HttpDelete]
         [Authorize(Roles = "Admin")]
-        [Route("Delete/{time}")]
-        public async Task<IActionResult> DeleteTemperature([FromRoute] string time)
+        [Route("Delete/{date}")]
+        public async Task<IActionResult> DeleteTemperature([FromRoute] string date)
         {
-            List<TemperatureSensor> temperatureList = await temperatureRemoverService.DeleteTemperatureByTime(time);
+            List<TemperatureSensor> temperatureList = await temperatureRemoverService.DeleteTemperatureByTime(date);
             if (!temperatureList.Any())
                 return NotFound();
             else
