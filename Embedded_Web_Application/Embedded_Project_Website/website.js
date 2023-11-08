@@ -2,7 +2,20 @@
 
 // Global variable
 let jwtToken = localStorage.getItem("jwtToken");
+let jwtExpirationTime = localStorage.getItem("jwtExpirationTime");
 let refreshToken = localStorage.getItem("refreshToken");
+let refreshExpirationTime = localStorage.getItem("refreshExpirationTime");
+let jwtTimeout = [
+  new Date(jwtExpirationTime).getHours(),
+  new Date(jwtExpirationTime).getMinutes(),
+  new Date(jwtExpirationTime).getSeconds(),
+];
+let refreshTimeout = [
+  new Date(refreshExpirationTime).getHours(),
+  new Date(refreshExpirationTime).getMinutes(),
+  new Date(refreshExpirationTime).getSeconds()
+];
+console.log(jwtTimeout);
 let logFlag = localStorage.getItem("logFlag");
 let userName = localStorage.getItem("userName");
 let timeFilterFlag = 0;
@@ -39,7 +52,7 @@ $(".option-button").css("color", "rgb(203, 29, 29)");
 $(".user-name").text("");
 $(".buzzer-state").text("NA");
 
-// Hide some element at the beginning
+// Show/Hide some element at the beginning
 $(".filter-table-div").hide();
 $("form").hide();
 $(".side-bar").hide();
@@ -48,6 +61,7 @@ if (logFlag === "logged") {
   $(".register-button").text("Refresh");
   $(".login-button").text("Logout");
   $(".user-name").text(userName);
+  $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
 }
 else {
   // Block table control
@@ -179,6 +193,7 @@ $(".login-button").dblclick(function () {
     $("table tr").remove(".value-rows");
     Block();
     alert("Logout sucessfully");
+    $(".token-timeout").text("");
   }
 });
 
@@ -792,10 +807,14 @@ async function Login() {
     $("form").hide();
     const result = await response.json();
     jwtToken = result.jwtToken;
+    jwtExpirationTime = result.expirationTime;
     refreshToken = result.refreshToken;
-    userName = result.userName;
+    refreshExpirationTime = result.refreshTokenExpirationTime;
     localStorage.setItem("jwtToken", jwtToken);
+    localStorage.setItem("jwtExpirationTime", jwtExpirationTime);
     localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("refreshExpirationTime", refreshExpirationTime);
+    userName = result.userName;
     localStorage.setItem("userName", userName);
     $(".user-name").text(userName);
     localStorage.setItem("logFlag", "logged");
@@ -804,10 +823,12 @@ async function Login() {
     Unlock();
     $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
-    setTimeout(() => {
-      alert("Your JWT Token was expired. please refresh a new token!");
-      Block();
-    }, 900000);
+    jwtTimeout = [
+      new Date(jwtExpirationTime).getHours(),
+      new Date(jwtExpirationTime).getMinutes(),
+      new Date(jwtExpirationTime).getSeconds(),
+    ];
+    $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
   }
 }
 
@@ -848,10 +869,14 @@ async function Register() {
     $("form").hide();
     const result = await response.json();
     jwtToken = result.jwtToken;
+    jwtExpirationTime = result.expirationTime;
     refreshToken = result.refreshToken;
-    userName = result.userName;
+    refreshExpirationTime = result.refreshTokenExpirationTime;
     localStorage.setItem("jwtToken", jwtToken);
+    localStorage.setItem("jwtExpirationTime", jwtExpirationTime);
     localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("refreshExpirationTime", refreshExpirationTime);
+    userName = result.userName;
     localStorage.setItem("userName", userName);
     $(".user-name").text(userName);
     localStorage.setItem("logFlag", "logged");
@@ -860,10 +885,12 @@ async function Register() {
     Unlock();
     $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
-    setTimeout(() => {
-      alert("Your JWT Token was expired. please refresh a new token!");
-      Block();
-    }, 900000);
+    jwtTimeout = [
+      new Date(jwtExpirationTime).getHours(),
+      new Date(jwtExpirationTime).getMinutes(),
+      new Date(jwtExpirationTime).getSeconds(),
+    ];
+    $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
   }
 }
 
@@ -896,15 +923,20 @@ async function Refresh() {
   } else {
     const result = await response.json();
     jwtToken = result.jwtToken;
+    jwtExpirationTime = result.expirationTime;
     refreshToken = result.refreshToken;
+    refreshExpirationTime = result.refreshTokenExpirationTime;
     localStorage.setItem("jwtToken", jwtToken);
+    localStorage.setItem("jwtExpirationTime", jwtExpirationTime);
     localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("refreshExpirationTime", refreshExpirationTime);
     alert("Successful refresh a new JWT Token");
-    Unlock();
-    setTimeout(() => {
-      alert("Your JWT Token was expired. please refresh a new token!");
-      Block();
-    }, 900000);
+    jwtTimeout = [
+      new Date(jwtExpirationTime).getHours(),
+      new Date(jwtExpirationTime).getMinutes(),
+      new Date(jwtExpirationTime).getSeconds(),
+    ];
+    $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
   }
 }
 

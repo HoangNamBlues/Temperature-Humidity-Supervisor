@@ -25,7 +25,7 @@ namespace WebApi.Core_Layer.Services
         public AuthenticationResponse CreateJwtToken(ApplicationUser applicationUser, string role)
         {
             /* Get the expiration time of JWT token */
-            DateTime expiration = DateTime.UtcNow.AddMinutes(Convert.ToDouble(configuration["Jwt:EXPIRATION_MINUTES"]));
+            DateTime expiration = DateTime.Now.AddMinutes(Convert.ToDouble(configuration["Jwt:EXPIRATION_MINUTES"]));
 
             /* Create claim of the user */
             Claim[] claims = new Claim[] { 
@@ -35,7 +35,7 @@ namespace WebApi.Core_Layer.Services
                 // JWT unique ID for per user
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 // The time when the JWT Token is generated
-                new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
+                new Claim(JwtRegisteredClaimNames.Iat, DateTime.Now.ToString()),
                 // The role of the user
                 new Claim(ClaimTypes.Role, role),           
 
@@ -74,7 +74,7 @@ namespace WebApi.Core_Layer.Services
                 ExpirationTime = expiration,
                 Role = role,
                 RefreshToken = CreateRefreshToken(),
-                RefreshTokenExpirationTime = DateTime.UtcNow.AddMinutes(Convert.ToDouble(configuration["RefreshToken:EXPIRATION_MINUTES"])) // Coordinated Universal Time (UTC) is a time standard that is used to regulate clock and time zones around the world. All time zones are defined by their offset from UTC.
+                RefreshTokenExpirationTime = DateTime.Now.AddMinutes(Convert.ToDouble(configuration["RefreshToken:EXPIRATION_MINUTES"])) // Coordinated Universal Time (UTC) is a time standard that is used to regulate clock and time zones around the world. All time zones are defined by their offset from UTC.
             };
         }
 
