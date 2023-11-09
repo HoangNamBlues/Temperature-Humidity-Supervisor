@@ -264,6 +264,15 @@ $(".average-button").click(function () {
   const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
   Average(date);
 });
+// Delete button
+$(".delete-button").click(function () {
+  var audio = new Audio("./Audio/classic-click.mp3");
+  audio.play();
+  $("table tr").remove(".value-rows"); // clear the row values of filter table
+  const searchInput = $(".date-search");
+  const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
+  DeleteByDate(date);
+});
 // Send button
 $(".send-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
@@ -775,6 +784,39 @@ async function GetLatestHumidity() {
       }); // sort data from the oldest time
       $(".humidity-result").text(`${data[data.length - 1].humidityValue}`);
     });
+}
+
+/* Function to delete the temperature/humidity based on the date input */
+async function DeleteByDate(date) {
+  if (option == 0) {
+    /* Get temperature data from the backend server */
+    await fetch(`https://localhost:5000/Api/Temperature/Delete/${date}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${jwtToken}`,
+      },
+    })
+      .then(
+        (response) => response.json() // convert the array response to json format, then waiting for this json response
+      )
+      .then((data) => {
+        alert(`${data.length} temperature values were deleted!`);
+      });
+  } else {
+    /* Get humidity data from the backend server */
+    await fetch(`https://localhost:5000/Api/Humidity/Delete/${date}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${jwtToken}`,
+      },
+    })
+      .then(
+        (response) => response.json() // convert the array response to json format, then waiting for this json response
+      )
+      .then((data) => {
+        alert(`${data.length} humidity values were deleted!`);
+      });
+  }
 }
 
 /* Function to login */

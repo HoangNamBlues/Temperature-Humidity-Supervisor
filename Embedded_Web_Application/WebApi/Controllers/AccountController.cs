@@ -184,7 +184,7 @@ namespace WebApi.Controllers
             // Find the user by email
             ApplicationUser user = await userManager.FindByEmailAsync(email);
 
-            if (user == null || user.RefreshToken != tokenModelRequest.RefreshToken || user.RefreshTokenExpirationTime <= DateTime.UtcNow)
+            if (user == null || user.RefreshToken != tokenModelRequest.RefreshToken || user.RefreshTokenExpirationTime <= DateTime.Now)
             {
                 return BadRequest("Invalid Refresh Token");
             }

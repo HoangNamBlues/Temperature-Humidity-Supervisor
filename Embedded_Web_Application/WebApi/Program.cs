@@ -11,7 +11,6 @@ using WebApi.Core_Layer.Domain.Repository_Interfaces;
 using WebApi.Core_Layer.Identity;
 using WebApi.Core_Layer.Service_Interfaces;
 using WebApi.Core_Layer.Services;
-using WebApi.Hub;
 using WebApi.Infrastructure_Layer.DbContext_Data;
 using WebApi.Infrastructure_Layer.Repositories;
 
@@ -77,7 +76,8 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
-        ValidateLifetime = true
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero // There is a token validation parameter called ClockSkew, it gets or sets the clock skew to apply when validating a time. The default value of ClockSkew is 5 minutes. That means if you haven't set it, your token will be still valid for up to 5 minutes. If you want to expire your token on the exact time; you'd need to set ClockSkew to zero 
     });
 
 /* Add CORS */
@@ -89,7 +89,7 @@ builder.Services.AddCors(options =>
             // .WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>())
             .WithOrigins("*")
             .WithHeaders("Authorization", "origin", "accept", "content-type", "Content-type", "dataType")
-            .WithMethods("GET", "POST");
+            .WithMethods("GET", "POST", "DELETE");
     });
 });
 
