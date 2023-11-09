@@ -9,15 +9,21 @@ let jwtTimeout = [
   new Date(jwtExpirationTime).getHours(),
   new Date(jwtExpirationTime).getMinutes(),
   new Date(jwtExpirationTime).getSeconds(),
+  new Date(jwtExpirationTime).getDate(),
+  new Date(jwtExpirationTime).getMonth(),
+  new Date(jwtExpirationTime).getFullYear(),
 ];
 let refreshTimeout = [
   new Date(refreshExpirationTime).getHours(),
   new Date(refreshExpirationTime).getMinutes(),
-  new Date(refreshExpirationTime).getSeconds()
+  new Date(refreshExpirationTime).getSeconds(),
+  new Date(jwtExpirationTime).getDate(),
+  new Date(jwtExpirationTime).getMonth(),
+  new Date(jwtExpirationTime).getFullYear(),
 ];
-console.log(jwtTimeout);
 let logFlag = localStorage.getItem("logFlag");
 let userName = localStorage.getItem("userName");
+let sendStatus = 0                                          // status of sending data from esp32 to web api (0: unsend; 1: sending) 
 let timeFilterFlag = 0;
 let dateFilterFlag = 0;
 let loginFlag = 0;
@@ -25,7 +31,7 @@ let registerFlag = 0;
 let loginForm = null;
 let registerForm = null;
 let option = 0;                                             // option = 0 --> temperature | option = 1 --> humidity
-let temperatureAverage = [];
+let temperatureAverage = [22, 35];
 let humidityAverage = [];
 let realtimeTemperature = null; 
 let realtimeHumidity = null;
@@ -67,6 +73,7 @@ else {
   // Block table control
   Block();
 }
+$(".stop-button").hide();
 $(".ws-disconnect-button").hide();
 $("#temperature-chart").hide();
 $("#humidity-chart").hide();
@@ -277,28 +284,13 @@ $(".delete-button").click(function () {
 $(".send-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  if ($(".send-state").text() == "Send") {
-    $(".send-state").text("Unsend");
-    SendHandle("Send");
-  } else {
-    $(".send-state").text("Send");
-    SendHandle("Unsend");
-  }
+  SendHandle("Send");
 });
-// Chart button
-$(".chart-button").click(function () {
+// Stop sending button
+$(".stop-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  // temperatureAverage = [0];
-  // humidityAverage = [0];
-  // for (let i = 20; i < 31; i++) { 
-  //   averagePush(`2023-10-${i}`);
-  // }
-  // $("#temperature-chart").remove();
-  // $("#humidity-chart").remove();
-  // $(".graph").append('<canvas id="temperature-chart"></canvas>');
-  // $(".graph").append('<canvas id="humidity-chart"></canvas>');
-  // DrawChart();
+  SendHandle("Unsend");
 });
 // Websocket connect button
 $(".ws-connect-button").click(function () {
@@ -865,12 +857,7 @@ async function Login() {
     Unlock();
     $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
-    jwtTimeout = [
-      new Date(jwtExpirationTime).getHours(),
-      new Date(jwtExpirationTime).getMinutes(),
-      new Date(jwtExpirationTime).getSeconds(),
-    ];
-    $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
+    TimeoutDisplay(0, jwtExpirationTime);
   }
 }
 
@@ -927,12 +914,7 @@ async function Register() {
     Unlock();
     $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
-    jwtTimeout = [
-      new Date(jwtExpirationTime).getHours(),
-      new Date(jwtExpirationTime).getMinutes(),
-      new Date(jwtExpirationTime).getSeconds(),
-    ];
-    $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
+    TimeoutDisplay(0, jwtExpirationTime);
   }
 }
 
@@ -973,12 +955,7 @@ async function Refresh() {
     localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("refreshExpirationTime", refreshExpirationTime);
     alert("Successful refresh a new JWT Token");
-    jwtTimeout = [
-      new Date(jwtExpirationTime).getHours(),
-      new Date(jwtExpirationTime).getMinutes(),
-      new Date(jwtExpirationTime).getSeconds(),
-    ];
-    $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
+    TimeoutDisplay(0, jwtExpirationTime);
   }
 }
 
@@ -1139,9 +1116,10 @@ async function AlarmHandle(option) {
 async function SendHandle(option) {
   if (option === "Send") {
     /* Send command to ESP32 Web Server to send the temperature humidity values */
-    await fetch(`http://${esp32IP}/Start`, {
+    const response =  await fetch(`http://${esp32IP}/Start`, {
       mode: "no-cors"
     });
+    console.log(response);
   } else if (option === "Unsend") {
     /* Send command to ESP32 Web Server to stop sending the temperature and humidity values */
     await fetch(`http://${esp32IP}/Stop`, {
@@ -1320,20 +1298,28 @@ function WebsocketInit(esp32IP) {
   // Listening the message from other devices
   socket.onmessage = (event) => {
     socketData = event.data.split(",");
-    if (socketData[0] === "data") {
-      $(".temperature-result").text(socketData[1]);
-      realtimeTemperature = parseFloat(socketData[1]);
-      $(".humidity-result").text(socketData[2]);
-      realtimeHumidity = parseFloat(socketData[2]);
-      if (socketData[3] === "1") {
-        alarmStatus = "ON";
-        $(".buzzer-state").text("ON");
-      }
-      else if (socketData[3] === "0") { 
-        alarmStatus = "OFF";
-        $(".buzzer-state").text("OFF");
-      }
+    if (socketData[0] === "Succeeded") {
+      $(".send-state").text("Sending...");
+      $(".send-button").hide();
+      $(".stop-button").fadeIn();
+    } else if (socketData[0] === "Failed") {
+      $(".send-state").text("Send");
+      $(".stop-button").hide();
+      $(".send-button").fadeIn();
     }
+      if (socketData[0] === "data") {
+        $(".temperature-result").text(socketData[1]);
+        realtimeTemperature = parseFloat(socketData[1]);
+        $(".humidity-result").text(socketData[2]);
+        realtimeHumidity = parseFloat(socketData[2]);
+        if (socketData[3] === "1") {
+          alarmStatus = "ON";
+          $(".buzzer-state").text("ON");
+        } else if (socketData[3] === "0") {
+          alarmStatus = "OFF";
+          $(".buzzer-state").text("OFF");
+        }
+      }
     if (socketData[0] === "message") { 
       alert(socketData[1]);
     }
@@ -1456,8 +1442,8 @@ function temperatureClock() {
     min: -40,
     height: 280,
     width: 1000,
-    greenFrom: 16,
-    greenTo: 40,
+    // greenFrom: 16,
+    // greenTo: 40,
     minorTicks: 5,
 
   };
@@ -1487,8 +1473,8 @@ function humidityClock() {
     min: 0,
     height: 280,
     width: 1000,
-    greenFrom: 30,
-    greenTo: 80,
+    // greenFrom: 30,
+    // greenTo: 80,
     minorTicks: 5,
   };
 
@@ -1503,4 +1489,37 @@ function humidityClock() {
     data.setValue(0, 1, humidity);
     chart.draw(data, options);
   }, 10);
+}
+
+/* Timeout display */
+function TimeoutDisplay(option, token) { 
+  const time = new Date(token);
+  if (option === 0) // jwt token
+  { 
+    jwtTimeout = [
+      time.getHours(),
+      time.getMinutes(),
+      time.getSeconds(),
+      time.getDate(),
+      time.getMonth() + 1, // Because getmonth() start from 0. You may want to have d1.getMonth() + 1 to achieve what you want
+      time.getFullYear(),
+    ];
+    $(".token-timeout").text(
+      `Expiration Time: ${jwtTimeout[3]}/${jwtTimeout[4]}/${jwtTimeout[5]}, ${jwtTimeout[0]}:${jwtTimeout[1]}`
+    );
+  }
+  else if (option === 1) // refresh token 
+  {
+    refreshTimeout = [
+      time.getHours(),
+      time.getMinutes(),
+      time.getSeconds(),
+      time.getDate(),
+      time.getMonth() + 1, // Because getmonth() start from 0. You may want to have d1.getMonth() + 1 to achieve what you want
+      time.getFullYear(),
+    ];
+    $(".token-timeout").text(
+      `Expiration Time: ${refreshTimeout[3]}/${refreshTimeout[4]}/${refreshTimeout[5]}, ${refreshTimeout[0]}:${refreshTimeout[1]}`
+    );
+   }
 }

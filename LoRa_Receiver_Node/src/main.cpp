@@ -59,7 +59,8 @@ DHT22Data data = {0, 0, false};                              // DHT22 received d
 ConnectButton wifiButton = {false, false, false, 22};        // button to connect/disconnect wifi
 ConnectButton loraButton = {false, false, false, 32};        // button to connect/disconnect lora
 bool wifiResetFlag = false;                                  // flag to check whether the wifi reset button was pressed
-bool sendingFlag = false;                                    // flag to identify whether esp32 sends data to web api or not
+bool sendingFlag = false;                                    // flag to check the sending/unsending data to web api command from website
+bool sendingStatus[2] = {false, false};                      // flag to check the status of sending data to web api
 bool loginFlag = false;                                      // flag to identify whether you have logan or not
 AsyncWebServer server(80);                                   // ESP32 server listening on port 80
 AsyncWebSocket ws("/ws");                                    // ESP32 websocket handle
@@ -250,8 +251,19 @@ void loop()
           PostTemperature(data.temp);
           Delayms(10);
           PostHumidity(data.humid);
+          if (sendingStatus[0] == true && sendingStatus[1] == true)
+          {
+            ws.textAll("Succeeded");
+          }
+          else {
+            ws.textAll("Failed");
+          }
           lastSendTime = millis();
         }
+      }
+      else 
+      {
+        ws.textAll("Failed");
       }
       // PUSH data to the website directly
       if (realtimeFlag == true)
@@ -328,10 +340,11 @@ bool PostTemperature(double temp)
   HTTPClient http;
   http.begin(postTemperatureUrl);
   int responseCode = http.POST("");
-  if (responseCode > 0)
+  if (responseCode == 200)
   {
     Serial.print("responseCode: ");
     Serial.println(responseCode);
+    sendingStatus[0] = true;
     return true;
     http.end();
   }
@@ -339,6 +352,7 @@ bool PostTemperature(double temp)
   {
     Serial.print("Error Code: ");
     Serial.println(responseCode);
+    sendingStatus[0] = false;
     return false;
     http.end();
   }
@@ -358,10 +372,11 @@ bool PostHumidity(double humid)
   HTTPClient http;
   http.begin(postTemperatureUrl);
   int responseCode = http.POST("");
-  if (responseCode > 0)
+  if (responseCode == 200)
   {
     Serial.print("responseCode: ");
     Serial.println(responseCode);
+    sendingStatus[1] = true;
     return true;
     http.end();
   }
@@ -369,6 +384,7 @@ bool PostHumidity(double humid)
   {
     Serial.print("Error Code: ");
     Serial.println(responseCode);
+    sendingStatus[1] = false;
     return false;
     http.end();
   }
