@@ -55,7 +55,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern TIM_HandleTypeDef htim4;
+
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -204,10 +204,7 @@ void SysTick_Handler(void)
 void EXTI1_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI1_IRQn 0 */
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
+	Delay_Ms(100);
   /* USER CODE END EXTI1_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(BUZZER_BUTTON_Pin);
   /* USER CODE BEGIN EXTI1_IRQn 1 */
@@ -221,10 +218,7 @@ void EXTI1_IRQHandler(void)
 void EXTI2_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI2_IRQn 0 */
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
+	Delay_Ms(100);
   /* USER CODE END EXTI2_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(INC_BUTTON_Pin);
   /* USER CODE BEGIN EXTI2_IRQn 1 */
@@ -238,10 +232,7 @@ void EXTI2_IRQHandler(void)
 void EXTI3_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI3_IRQn 0 */
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
+	Delay_Ms(100);
   /* USER CODE END EXTI3_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(DES_BUTTON_Pin);
   /* USER CODE BEGIN EXTI3_IRQn 1 */
@@ -255,29 +246,12 @@ void EXTI3_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
-	Delay_Us(65000);
+	Delay_Ms(100);
   /* USER CODE END EXTI9_5_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(MODE_BUTTON_Pin);
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 
   /* USER CODE END EXTI9_5_IRQn 1 */
-}
-
-/**
-  * @brief This function handles TIM4 global interrupt.
-  */
-void TIM4_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM4_IRQn 0 */
-
-  /* USER CODE END TIM4_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim4);
-  /* USER CODE BEGIN TIM4_IRQn 1 */
-
-  /* USER CODE END TIM4_IRQn 1 */
 }
 
 /**

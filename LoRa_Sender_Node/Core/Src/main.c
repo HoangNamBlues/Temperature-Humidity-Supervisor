@@ -55,7 +55,6 @@ SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 
@@ -84,7 +83,6 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART1_UART_Init(void);
-static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 void Packet_Encapsulation(char* buffer, int src_id, int des_id, double temp, double humid, int cmd_status, int alarm_status);
 void Lcd_Sytem_State_Print(uint8_t mode);
@@ -131,7 +129,6 @@ int main(void)
   MX_TIM3_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
-  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 	// Initialize Timer 2 / Timer 3
 	HAL_TIM_Base_Start(&htim2);
@@ -191,15 +188,17 @@ int main(void)
 		dht22Status = DHT22_Get_Data(&dht22Data);
 		/* LoRa sending */
 		Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus, alarmStatus);
-		// Stop Timer 4
-		HAL_TIM_Base_Stop_IT(&htim4);
-		// LoRa sending data
+
+		/* LoRa sending data */
 		loraStatus = LoRa_transmit(&myLoRa, (uint8_t*) lora_data, strlen(lora_data), 100);
 		Delay_Ms(50);
-		cmdStatus = 0;
-		// Start Timer 4
-		__HAL_TIM_SET_COUNTER(&htim4, 0);
-		HAL_TIM_Base_Start_IT(&htim4);
+
+		/* Check if the command was processed successfully */
+		if (loraStatus == 1 && cmdStatus == 1)
+		{
+			cmdStatus = 0;
+		}
+
 		/* Check the temperature and humidity level */
 		Alarm_Check(dht22Data.temperature, dht22Data.humidity);
 
@@ -411,51 +410,6 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-
-}
-
-/**
-  * @brief TIM4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 64000-1;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 150-1;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM4_Init 2 */
-
-  /* USER CODE END TIM4_Init 2 */
 
 }
 
@@ -693,6 +647,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			{
 				mode = NORMAL;
 			}
+			break;
+
+		case DIO0_Pin:
+			/* LoRa receiving */
+			LoRa_receive(&myLoRa, (uint8_t*) received_data, 20);
+			LoRa_Receive_Handle();
 			break;
 
 		// Something went wrong, turn back to NORMAL MODE
@@ -1061,17 +1021,6 @@ void LoRa_Receive_Handle()
 			humid_setpoint[1] = d;
 			cmdStatus = 1;
 		}
-	}
-}
-
-// Timer 4 callback
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if (htim == &htim4)
-	{
-		/* LoRa receiving */
-		LoRa_receive(&myLoRa, (uint8_t*) received_data, 20);
-		LoRa_Receive_Handle();
 	}
 }
 
