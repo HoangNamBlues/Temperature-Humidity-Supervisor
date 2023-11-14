@@ -1,4 +1,5 @@
 #include "LoRa.h"
+#include "main.h"
 
 /* ----------------------------------------------------------------------------- *\
 		name        : newLoRa
@@ -387,7 +388,7 @@ uint8_t LoRa_transmit(LoRa* _LoRa, uint8_t* data, uint8_t length, uint16_t timeo
 				return 0;
 			}
 		}
-		HAL_Delay(1);
+		Delay_Ms(1);
 	}
 }
 

@@ -55,6 +55,7 @@ SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 
@@ -83,6 +84,7 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 void Packet_Encapsulation(char* buffer, int src_id, int des_id, double temp, double humid, int cmd_status, int alarm_status);
 void Lcd_Sytem_State_Print(uint8_t mode);
@@ -129,6 +131,7 @@ int main(void)
   MX_TIM3_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 	// Initialize Timer 2 / Timer 3
 	HAL_TIM_Base_Start(&htim2);
@@ -146,6 +149,15 @@ int main(void)
 	lcd_init();
 
 	// Initialize LoRa
+	/* Consider three factors: transmission power, bandwidth and spreading factor.
+	 * If you lower the transmission power, you will save the battery, but the range of the signal will obviously be shorter.
+	 * If you increase the data rate (make the bandwidth wider or the spreading factor lower), you can transmit those bytes in a shorter time.
+	 * The calculation is approximately as follows:
+	 * Making the bandwidth 2x wider (from BW125 to BW250) allows you to send 2x more bytes in the same time.
+	 * For a LoRa® receiver to detect (capture) a packet, the transmitter and receiver frequencies need to be within 25% of the bandwidth of each other, that’s according to the data sheet.
+	 * Making the spreading factor 1 step lower (from SF10 to SF9) allows you to send 2x more bytes in the same time.
+	 * Lowering the spreading factor makes it more difficult for the gateway to receive a transmission, as it will be more sensitive to noise.
+	 * You could compare this to two people taking in a noisy place (a bar for example). If you’re far from each other, you have to talk slow (SF10), but if you’re close, you can talk faster (SF7) */
 	myLoRa = newLoRa();
 	myLoRa.CS_port = NSS_GPIO_Port;
 	myLoRa.CS_pin = NSS_Pin;
@@ -175,6 +187,16 @@ int main(void)
 	// Turn off the alarm mode
 	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 
+
+	//SCB->SCR |= ( 1 << 1);
+		HAL_PWR_EnableSleepOnExit();
+
+	/* lets start with fresh Status register of Timer to avoid any spurious interrupts */
+	    TIM4->SR = 0;
+
+	// Start Timer 4
+	HAL_TIM_Base_Start_IT(&htim4);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -183,32 +205,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-		/* DHT22 get data */
-		dht22Status = DHT22_Get_Data(&dht22Data);
-		/* LoRa sending */
-		Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus, alarmStatus);
-
-		/* LoRa sending data */
-		loraStatus = LoRa_transmit(&myLoRa, (uint8_t*) lora_data, strlen(lora_data), 100);
-		Delay_Ms(50);
-
-		/* Check if the command was processed successfully */
-		if (loraStatus == 1 && cmdStatus == 1)
-		{
-			cmdStatus = 0;
-		}
-
-		/* Check the temperature and humidity level */
-		Alarm_Check(dht22Data.temperature, dht22Data.humidity);
-
-		/* Print DHT22 data onto LCD */
-		Lcd_Sytem_State_Print(mode);
-
-		/* Handle when the increase/decrease button is pressed a long time */
-		Long_Pressed_Button();
-
-		Delay_Ms(300);
+		// Go to sleep mode
+		//MCU resumes here when it wakes up
+//		__WFI();
+		Delay_Ms(500);
+		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	}
   /* USER CODE END 3 */
 }
@@ -414,6 +415,51 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 64000-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 300;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -505,16 +551,16 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 15, 0);
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI2_IRQn, 15, 0);
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI3_IRQn, 15, 0);
+  HAL_NVIC_SetPriority(EXTI3_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 15, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
@@ -1021,6 +1067,35 @@ void LoRa_Receive_Handle()
 			humid_setpoint[1] = d;
 			cmdStatus = 1;
 		}
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim == &htim4)
+	{
+		/* DHT22 get data */
+		dht22Status = DHT22_Get_Data(&dht22Data);
+		/* LoRa sending */
+		Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus, alarmStatus);
+
+		/* LoRa sending data */
+		loraStatus = LoRa_transmit(&myLoRa, (uint8_t*) lora_data, strlen(lora_data), 100);
+
+		/* Check if the command was processed successfully */
+		if (loraStatus == 1 && cmdStatus == 1)
+		{
+			cmdStatus = 0;
+		}
+
+		/* Check the temperature and humidity level */
+		Alarm_Check(dht22Data.temperature, dht22Data.humidity);
+
+		/* Print DHT22 data onto LCD */
+		Lcd_Sytem_State_Print(mode);
+
+		/* Handle when the increase/decrease button is pressed a long time */
+		Long_Pressed_Button();
 	}
 }
 

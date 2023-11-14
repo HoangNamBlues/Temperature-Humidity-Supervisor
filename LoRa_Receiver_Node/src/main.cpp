@@ -163,6 +163,7 @@ void setup()
   // Webserver configuration
   initWebSocket();
   WebServerConfig();
+  server.begin();
 }
 
 /******************************************************************** LOOP *************************************************************************************/
@@ -272,12 +273,6 @@ void loop()
         ws.textAll(message);
       }
       data.received = false;
-    }
-    // Check if esp32 was set as webserver
-    if (webserverFlag == false)
-    {
-      server.begin();
-      webserverFlag = true;
     }
   }
 }
