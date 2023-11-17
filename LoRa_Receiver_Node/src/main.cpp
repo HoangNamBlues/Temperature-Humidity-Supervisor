@@ -29,8 +29,8 @@
 // Define the pin for Buzzer
 #define BUZZER 33
 
-#define WIFIRESETBUTTON 21 // button to reset (or clear all the stored wifi credentials )
-#define UNSENDBUTTON 17
+#define WIFI_RESET_BUTTON 21 // button to reset (or clear all the stored wifi credentials )
+#define SERVER_LISTENING_BUTTON 17 // button to configure esp32 as a server
 
 /* DHT22 datatype */
 typedef struct
@@ -65,6 +65,8 @@ bool loginFlag = false;                                      // flag to identify
 AsyncWebServer server(80);                                   // ESP32 server listening on port 80
 AsyncWebSocket ws("/ws");                                    // ESP32 websocket handle
 bool webserverFlag = false;                                  // flag to check whether esp32 was set as webserver
+bool websocketFlag = false;                                  // flag to check whether esp32 was set as websocket
+bool websocketConnected = false;                             // flag to check whether websocket connection was established
 bool realtimeFlag = false;                                   // flag to check the realtime mode
 double temperatureRange[2] = {0, 0};                         // array containing lowest and highest temperature level
 double humidityRange[2] = {0, 0};                            // array containing lowest and highest humidity level
@@ -94,9 +96,12 @@ void SendDataToServer(double temperature);          // Send data to server
 String PostLogin();                                 // Login as an admin
 void WebServerConfig();                             // ESP32 WebServer configuration
 // Interrupt Service Routine
-void IRAM_ATTR WiFiButtonEvent();     // Button interrupt handler
-void IRAM_ATTR LoRaButtonEvent();     // Button interrupt handler
-void IRAM_ATTR WiFiResetEvent();    // Button interrupt handler
+void IRAM_ATTR WiFiButtonEvent();       // Button interrupt handler
+void IRAM_ATTR LoRaButtonEvent();       // Button interrupt handler
+void IRAM_ATTR WiFiResetEvent();        // Button interrupt handler
+void IRAM_ATTR LoRaReceptionEvent();    // LoRa reception interrupt handler
+void IRAM_ATTR ServerListeningEvent();  // Server listening interrupt handler
+
 // Buzzer
 void BuzzerTrigger(); // Buzzer trigger
 // Delay
@@ -107,7 +112,6 @@ void LoRaStatusDisplay();                    // LoRa status Oled display
 void WiFiStatusDislay();                     // WiFI status Oled display
 void WebapiStatusDisplay();                  // Web API status Oled display
 // Websocket
-void notifyClients();
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void initWebSocket();
@@ -154,16 +158,14 @@ void setup()
   // Initialize Interrupt Button
   pinMode(wifiButton.pinNumber, INPUT_PULLUP);
   pinMode(loraButton.pinNumber, INPUT_PULLDOWN);
-  pinMode(WIFIRESETBUTTON, INPUT_PULLUP);
+  pinMode(WIFI_RESET_BUTTON, INPUT_PULLUP);
+  pinMode(SERVER_LISTENING_BUTTON, INPUT_PULLUP);
   // Attach the interrupt event
   attachInterrupt(wifiButton.pinNumber, WiFiButtonEvent, FALLING);
-  attachInterrupt(WIFIRESETBUTTON, WiFiResetEvent, FALLING);
+  attachInterrupt(WIFI_RESET_BUTTON, WiFiResetEvent, FALLING);
+  attachInterrupt(SERVER_LISTENING_BUTTON, ServerListeningEvent, FALLING);
   attachInterrupt(loraButton.pinNumber, LoRaButtonEvent, CHANGE);
- 
-  // Webserver configuration
-  initWebSocket();
-  WebServerConfig();
-  server.begin();
+  // attachInterrupt(DI0, LoRaReceptionEvent, RISING);
 }
 
 /******************************************************************** LOOP *************************************************************************************/
@@ -192,6 +194,16 @@ void loop()
   if (loraButton.connect)
   {
     data = LoRaReceive(); // receive dht22 data
+    // LoRa.parsePacket();
+  }
+  // Set esp32 as a server
+  if (webserverFlag == true)
+  {
+    // Webserver configuration
+    initWebSocket();
+    WebServerConfig();
+    server.begin();
+    webserverFlag = false;
   }
   OledDisplay(data.temp, data.humid); // display data on OLED
   Delayms(10);
@@ -245,7 +257,7 @@ void loop()
         ws.textAll("message,The command is sent successfully");
       }
       // POST data to webserver
-      if (sendingFlag == true && alarmCmd == false)
+      if (sendingFlag == true)
       {
         if (millis() - lastSendTime > 5000)
         {
@@ -357,15 +369,15 @@ bool PostTemperature(double temp)
 bool PostHumidity(double humid)
 {
   /* Post request url */
-  String postTemperatureUrl = "https://" + backendIP + "/Api/Humidity/ESP32/AddHumidity/";
+  String postHumidityUrl = "https://" + backendIP + "/Api/Humidity/ESP32/AddHumidity/";
   String strbuff = String(humid, 2);                 // Convert double type to string type humidity
-  postTemperatureUrl = postTemperatureUrl + strbuff; // Add humidity string to Post Url string
+  postHumidityUrl = postHumidityUrl + strbuff;       // Add humidity string to Post Url string
   Serial.print("POST request url: ");
-  Serial.println(postTemperatureUrl);
+  Serial.println(postHumidityUrl);
 
   /* Begin to send POST request to the server */
   HTTPClient http;
-  http.begin(postTemperatureUrl);
+  http.begin(postHumidityUrl);
   int responseCode = http.POST("");
   if (responseCode == 200)
   {
@@ -644,11 +656,10 @@ void OledDisplay(double temp, double humid)
     WiFiStatusDislay();
     WebapiStatusDisplay();
     LoRaStatusDisplay();
-    display.print("\nTemperature: ");
-    display.print(String(temp));
-    display.print("\nHumidity: ");
+    display.print("Temperature: ");
+    display.println(String(temp));
+    display.print("Humidity: ");
     display.print(String(humid));
-    // data.received = false;
   }
   else
   {
@@ -676,9 +687,21 @@ void LoRaStatusDisplay()
 /* Sending to webapi status display */
 void WebapiStatusDisplay()
 {
+  if(websocketFlag == true && websocketConnected == false)
+  {
+    display.println("Websocket: Listening");
+  }
+  else if (websocketFlag == true && websocketConnected == true)
+  {
+    display.println("Websocket: Connected");
+  }
+  else
+  {
+    display.println("Websocket: Closed");
+  }
   if (sendingFlag == true)
   {
-    display.println("Sending...");
+    display.println("Sending to Webapi");
   }
   else
   {
@@ -972,21 +995,33 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   switch (type)
   {
   case WS_EVT_CONNECT:
-Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-break;
+    websocketConnected = true;
+    // Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    break;
   case WS_EVT_DISCONNECT:
-Serial.printf("WebSocket client #%u disconnected\n", client->id());
-break;
+    websocketFlag = false;
+    websocketConnected = false;
+    // Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    break;
   case WS_EVT_DATA:
-handleWebSocketMessage(arg, data, len);
-break;
+    handleWebSocketMessage(arg, data, len);
+    break;
   case WS_EVT_PONG:
   case WS_EVT_ERROR:
-break;
+    break;
   }
 }
 void initWebSocket()
 {
   ws.onEvent(onEvent);
   server.addHandler(&ws);
+}
+
+/* Server listening handler */
+void IRAM_ATTR ServerListeningEvent()
+{
+  Delayms(50);
+  BuzzerTrigger();
+  webserverFlag = true;
+  websocketFlag = true;
 }

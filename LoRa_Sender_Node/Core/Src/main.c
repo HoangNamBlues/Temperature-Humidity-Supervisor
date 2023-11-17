@@ -205,11 +205,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		// Go to sleep mode
-		//MCU resumes here when it wakes up
-//		__WFI();
-		Delay_Ms(500);
-		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	}
   /* USER CODE END 3 */
 }
@@ -876,6 +871,7 @@ void Lcd_Sytem_State_Print(uint8_t mode) {
 // Long pressed button handle
 void Long_Pressed_Button(void)
 {
+	HAL_TIM_Base_Stop_IT(&htim4);
 	// Temperature set point increase/decrease when the button is pressed a long time
 	while(!HAL_GPIO_ReadPin(DES_BUTTON_GPIO_Port, DES_BUTTON_Pin) && (mode == TEMPERATURE_SETPOINT_LOW))
 	{
@@ -952,6 +948,8 @@ void Long_Pressed_Button(void)
 			Lcd_Sytem_State_Print(mode);
 		}
 	}
+	__HAL_TIM_SET_COUNTER(&htim4, 0);
+	HAL_TIM_Base_Start_IT(&htim4);
 }
 
 // Alarm checking
@@ -1076,14 +1074,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		/* DHT22 get data */
 		dht22Status = DHT22_Get_Data(&dht22Data);
-		/* LoRa sending */
-		Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus, alarmStatus);
 
-		/* LoRa sending data */
-		loraStatus = LoRa_transmit(&myLoRa, (uint8_t*) lora_data, strlen(lora_data), 100);
+		if(dht22Status == 1)
+		{
+			/* LoRa sending */
+			Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus, alarmStatus);
 
-		/* Check if the command was processed successfully */
-		if (loraStatus == 1 && cmdStatus == 1)
+			/* LoRa sending data */
+			loraStatus = LoRa_transmit(&myLoRa, (uint8_t*) lora_data, strlen(lora_data), 100);
+
+			/* Check if the command was processed successfully */
+			if (loraStatus == 1 && cmdStatus == 1)
+			{
+				cmdStatus = 0;
+			}
+		}
+
+		else
 		{
 			cmdStatus = 0;
 		}

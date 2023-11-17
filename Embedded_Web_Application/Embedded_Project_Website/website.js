@@ -284,12 +284,14 @@ $(".delete-button").click(function () {
 $(".send-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
+  $(".send-state").text("Processing...");
   SendHandle("Send");
 });
 // Stop sending button
 $(".stop-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
+  $(".send-state").text("Processing...");
   SendHandle("Unsend");
 });
 // Websocket connect button
@@ -1149,143 +1151,6 @@ async function HumidityRange(lowest, highest) {
   });
 }
 
-/* Function to draw line chart */
-function DrawChart() {
-  const month = $(".side-bar-field select").find(":selected").val();
-  const days = [
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-    "17",
-    "18",
-    "19",
-    "20",
-    "21",
-    "22",
-    "23",
-    "24",
-    "25",
-    "26",
-    "27",
-    "28",
-    "29",
-    "30",
-  ];
-  // const humidWeekOne = [67, 68, 68, 64, 67, 64, 63, 67, 68, 68, 64, 67];
-  // const humidWeekTwo = [54, 58, 58, 54, 57, 54, 73, 67, 68, 68, 64, 67];
-  // const tempWeekOne = [24, 25, 27, 25, 25, 26, 24, 24, 25, 27, 25, 25];
-  // const tempWeekTwo = [26, 27, 24, 27, 22, 26, 27, 24, 25, 27, 25, 25];
-  if (month == "October") {
-    new Chart("temperature-chart", {
-      type: "line",
-      data: {
-        labels: days,
-        datasets: [
-          {
-            label: "Temperature On October",
-            data: temperatureAverage,
-            borderColor: "red",
-            fill: false,
-          },
-          // {
-          //   label: "Temperature On February",
-          //   data: tempWeekTwo,
-          //   borderColor: "orange",
-          //   fill: false,
-          // },
-        ],
-      },
-      options: {
-        legend: { display: false },
-      },
-    });
-
-    new Chart("humidity-chart", {
-      type: "line",
-      data: {
-        labels: days,
-        datasets: [
-          {
-            label: "Humidity On January",
-            data: humidityAverage,
-            borderColor: "blue",
-            fill: false,
-          },
-          // {
-          //   label: "Humidity On February",
-          //   data: humidWeekTwo,
-          //   borderColor: "purple",
-          //   fill: false,
-          // },
-        ],
-      },
-      options: {
-        legend: { display: false },
-        scales: {
-          y: {
-            beginAtZero: true,
-          },
-        },
-      },
-    });
-  }
-}
-
-/* Fucntion to push the average temperature and humidity values to array */
-async function averagePush(date) {
-  let average = 0;
-  if (option == 0) {
-    /* Get temperature data from the backend server and calculate the average */
-    await fetch(`https://localhost:5000/Api/Temperature/SearchByDate/${date}`, {
-      headers: {
-        Authorization: `Bearer ${jwtToken}`,
-      },
-    })
-      .then(
-        (response) => response.json() // convert the array response to json format, then waiting for this json response
-      )
-      .then((data) => {
-        for (let i = 0; i < data.length; i++) {
-          average += data[i]["temperatureValue"];
-        }
-        average = (average / data.length).toFixed(2);
-        temperatureAverage.push(average);
-        console.log(temperatureAverage);
-      });
-  } else {
-    /* Get humidity data from the backend server and calculate the average */
-    await fetch(`https://localhost:5000/Api/Humidity/SearchByDate/${date}`, {
-      headers: {
-        Authorization: `Bearer ${jwtToken}`,
-      },
-    })
-      .then(
-        (response) => response.json() // convert the array response to json format, then waiting for this json response
-      )
-      .then((data) => {
-        for (let i = 0; i < data.length; i++) {
-          average += data[i]["humidityValue"];
-        }
-        average = (average / data.length).toFixed(2);
-        humidityAverage.push(average);
-        console.log(humidityAverage);
-      });
-  }
-}
-
 /* Websocket */
 function WebsocketInit(esp32IP) {
   // Open websocket connection
@@ -1293,13 +1158,14 @@ function WebsocketInit(esp32IP) {
   // Open connection handle
   socket.onopen = (event) => {
     console.log("WebSocket connection opened");
+    alert("WebSocket connection opened");
     RealtimeMode("ON");
   };
   // Listening the message from other devices
   socket.onmessage = (event) => {
     socketData = event.data.split(",");
     if (socketData[0] === "Succeeded") {
-      $(".send-state").text("Sending...");
+      $(".send-state").text("Sending");
       $(".send-button").hide();
       $(".stop-button").fadeIn();
     } else if (socketData[0] === "Failed") {
@@ -1329,18 +1195,23 @@ function WebsocketInit(esp32IP) {
   socket.onclose = (event) => {
     if (event.wasClean) {
       console.log("WebSocket connection closed cleanly");
+      alert("WebSocket connection closed cleanly");
     } else {
       console.error("WebSocket connection abruptly closed");
+      alert("WebSocket connection abruptly closed");
     }
     RealtimeMode("OFF");
+    realtimeTemperature = null;
+    realtimeHumidity = null;
   };
   // Connection error handle
   socket.onerror = (error) => {
     console.error("WebSocket error: " + error.message);
+    alert("WebSocket error: " + error.message);
+    realtimeTemperature = null;
+    realtimeHumidity = null;
   };
 }
-
-/* Google Chart draw function */
 
 // Temperature chart
 function DrawTemperatureChart() {
