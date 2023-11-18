@@ -116,6 +116,8 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void initWebSocket();
 
+void onReceive(int packetSize);
+
 /******************************************************************** SETUP ************************************************************************************/
 void setup()
 {
@@ -194,7 +196,6 @@ void loop()
   if (loraButton.connect)
   {
     data = LoRaReceive(); // receive dht22 data
-    // LoRa.parsePacket();
   }
   // Set esp32 as a server
   if (webserverFlag == true)
@@ -206,19 +207,19 @@ void loop()
     webserverFlag = false;
   }
   OledDisplay(data.temp, data.humid); // display data on OLED
-  Delayms(10);
-  if (wifiButton.connect == true)
+  Delayms(50);
+  if (data.received == true)
   {
-    // Check if esp32 has received LoRa data
-    if (data.received == true)
+    if (wifiButton.connect == true)
     {
+      // Check if esp32 has received LoRa data
       // Check the command status
       if (cmdFlag == false)
       {
         if (alarmCmd == 1)
         {
           LoRaSend("10", "1,ON");
-          Delayms(10);
+          Delayms(100);
         }
         else if (alarmCmd == 2)
         {
@@ -230,14 +231,14 @@ void loop()
           char message[20];
           sprintf(message, "2,%0.1lf,%0.1lf", temperatureRange[0], temperatureRange[1]);
           LoRaSend("10", message);
-          Delayms(10);
+          Delayms(100);
         }
         if (humidityRangeFlag == true)
         {
           char message[20];
           sprintf(message, "3,%0.1lf,%0.1lf", humidityRange[0], humidityRange[1]);
           LoRaSend("10", message);
-          Delayms(10);
+          Delayms(100);
         }
       }
       else if (cmdFlag == true)
@@ -538,6 +539,17 @@ void LoRaConfig(int nss, int rst, int di0)
     Serial.println(".");
     Delayms(500);
   }
+
+  LoRa.setSignalBandwidth(250E3);
+
+  // LoRa.setSpreadingFactor(6); // ranges from 6-12,default 7 see API docs
+
+  // // register the receive callback
+  // LoRa.onReceive(onReceive);
+
+  // // put the radio into receive mode
+  // LoRa.receive();
+
   // Change sync word (0xF1) to match the receiver LoRa
   // This code ensure that you don't get LoRa messages
   // from other LoRa transceivers
@@ -821,22 +833,92 @@ DHT22Data LoRaReceive()
   return data;
 }
 
+/* Receive mode */
+void onReceive(int packetSize)
+{
+  if (packetSize == 0)
+    return; // if there's no packet, return
+
+  String LoRaData;                     // LoRa data
+  char *rcvSrcId;                      // pointer to source ID
+  char *rcvDesId;                      // pointer to destination ID
+  char *temp;                          // pointer to temperature
+  char *humid;                         // pointer to humidity
+  char *cmdStatus;                     // pointer to command status
+  char *alarmStatus;                   // pointer to alarm status
+  char rcvData[20];                    // array containing String of LoRa data
+  char buffer[20];                     // array containing seperate components in array of LoRa data
+  // Receive the data from LoRa sender in String format
+  while (LoRa.available())
+  {
+    LoRaData = LoRa.readString();
+  }
+
+  // Get information from the received string: "source_id,destination_id,temperature,humidity"
+  LoRaData.toCharArray(rcvData, LoRaData.length() + 1); // Convert String format to array format
+  rcvSrcId = strtok(rcvData, ",");                      // return the pointer to the source_id
+  rcvDesId = strtok(NULL, ",");                         // continue to return the pointer to the destination_id
+  temp = strtok(NULL, ",");                             // continue to return the pointer to the temperature
+  humid = strtok(NULL, ",");                            // continue to return the pointer to the humidity
+  cmdStatus = strtok(NULL, ",");                        // continue to return the pointer to the command status
+  alarmStatus = strtok(NULL, ",");                      // continue to return the pointer to the alarm status
+
+  // Check if the destination_id is correct
+  if (!strcmp(rcvDesId, sourceId))
+  {
+    // Convert to double type
+    strcpy(buffer, temp);               // copy the temperature string to the buffer
+    sscanf(buffer, "%lf", &data.temp);  // convert the temperature string to double type
+    strcpy(buffer, humid);              // copy the humidity string to the buffer
+    sscanf(buffer, "%lf", &data.humid); // convert the humidity string to double type
+
+    // Successful data reception
+    data.received = true;
+  }
+  else
+  {
+    // The ID does not match 
+    data.received = false;
+    Serial.println("This message is not for me.");
+    return;
+  }
+
+  // Check the command status
+  if (!strcmp(cmdStatus, "1"))
+  {
+    cmdFlag = true;
+  }
+  else if (!strcmp(cmdStatus, "0"))
+  {
+    cmdFlag = false;
+  }
+  // Check the alarm status
+  if (!strcmp(alarmStatus, "1"))
+  {
+    alarm_status = 1;
+  }
+  else if (!strcmp(alarmStatus, "0"))
+  {
+    alarm_status = 0;
+  }
+}
+
 /* LoRa send data */
-    void LoRaSend(const char *desID, const char *message)
-    {
-      // send packet
-      LoRa.beginPacket();            // start packet
-      LoRa.print(sourceId);          // add source ID to the packet
-      LoRa.print(seperateCharacter); // add the seperate character to the packet
-      LoRa.print(desID);             // add destination ID to the packet
-      LoRa.print(seperateCharacter); // add the seperate character to the packet
-      LoRa.print(message);           // add message to the packet
-      LoRa.endPacket();              // finish packet and send it
-    }
+  void LoRaSend(const char *desID, const char *message)
+  {
+    // send packet
+    LoRa.beginPacket();            // start packet
+    LoRa.print(sourceId);          // add source ID to the packet
+    LoRa.print(seperateCharacter); // add the seperate character to the packet
+    LoRa.print(desID);             // add destination ID to the packet
+    LoRa.print(seperateCharacter); // add the seperate character to the packet
+    LoRa.print(message);           // add message to the packet
+    LoRa.endPacket();              // finish packet and send it
+  }
 
 /* ESP32 Web Server configuration */
-    void WebServerConfig()
-    {
+  void WebServerConfig()
+  {
     // Send a GET request to turn on/off the alarm
     server.on("/Alarm", HTTP_GET, [](AsyncWebServerRequest *request){
       String message;

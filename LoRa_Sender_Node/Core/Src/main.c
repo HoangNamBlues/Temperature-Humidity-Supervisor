@@ -166,6 +166,13 @@ int main(void)
 	myLoRa.DIO0_port = DIO0_GPIO_Port;
 	myLoRa.DIO0_pin = DIO0_Pin;
 	myLoRa.hSPIx = &hspi2;
+
+	// Other parameters
+//	myLoRa.frequency             = 433;             // default = 433 MHz
+//	myLoRa.spredingFactor        = SF_7;           	// default = SF_7
+	myLoRa.bandWidth             = BW_250KHz;       // default = BW_125KHz
+//	myLoRa.power                 = POWER_17db;      // default = 20db
+
 	if (LoRa_init(&myLoRa) == 200) {
 		lcd_clear();
 		lcd_put_cursor(0, 5);
@@ -546,7 +553,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 7, 0);
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
   HAL_NVIC_SetPriority(EXTI2_IRQn, 7, 0);
@@ -593,11 +600,10 @@ void Buzzer_Trigger(void) {
 // Buzzer button callback
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	Buzzer_Trigger();
 	switch (GPIO_Pin) {
-
 		// MODE_BUTTON pressed
 		case MODE_BUTTON_Pin:
+			Buzzer_Trigger();
 			if(mode == NORMAL)
 			{
 				lcd_clear();
@@ -627,6 +633,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 		// BUZZER_BUTTON pressed
 		case BUZZER_BUTTON_Pin:
+			Buzzer_Trigger();
 			// Toggle the built-in LED, changing the alarm status
 			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 			// Check if the alarm is turned OFF
@@ -644,6 +651,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 		// INC_BUTTON pressed
 		case INC_BUTTON_Pin:
+			Buzzer_Trigger();
 			if(mode == TEMPERATURE_SETPOINT_LOW)
 			{
 				temp_setpoint[0] = temp_setpoint[0] + 0.1;
@@ -668,6 +676,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 		// DES_BUTTON pressed
 		case DES_BUTTON_Pin:
+			Buzzer_Trigger();
 			if(mode == TEMPERATURE_SETPOINT_LOW)
 			{
 				temp_setpoint[0] = temp_setpoint[0] - 0.1;
