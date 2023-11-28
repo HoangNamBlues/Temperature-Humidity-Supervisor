@@ -25,7 +25,6 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
- ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
  D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc/LoRa.h \
  D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc/DHT22.h \
  D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc/LCD_I2C.h
@@ -56,7 +55,6 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h:
-../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
 D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc/LoRa.h:
 D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc/DHT22.h:
 D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc/LCD_I2C.h:

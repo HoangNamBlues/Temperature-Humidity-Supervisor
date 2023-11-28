@@ -72,13 +72,13 @@ void Buzzer_Trigger(void);
 #define DES_BUTTON_EXTI_IRQn EXTI3_IRQn
 #define DHT22_Pin GPIO_PIN_5
 #define DHT22_GPIO_Port GPIOA
-#define NSS_Pin GPIO_PIN_0
-#define NSS_GPIO_Port GPIOB
-#define RST_Pin GPIO_PIN_1
-#define RST_GPIO_Port GPIOB
 #define DIO0_Pin GPIO_PIN_10
 #define DIO0_GPIO_Port GPIOB
 #define DIO0_EXTI_IRQn EXTI15_10_IRQn
+#define RST_Pin GPIO_PIN_11
+#define RST_GPIO_Port GPIOB
+#define NSS_Pin GPIO_PIN_12
+#define NSS_GPIO_Port GPIOB
 #define MODE_BUTTON_Pin GPIO_PIN_8
 #define MODE_BUTTON_GPIO_Port GPIOA
 #define MODE_BUTTON_EXTI_IRQn EXTI9_5_IRQn

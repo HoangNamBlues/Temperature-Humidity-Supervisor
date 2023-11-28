@@ -51,8 +51,10 @@ typedef struct
 
 /* Global variable */
 Adafruit_SSD1306 display = Adafruit_SSD1306(128, 64, &WIRE); // Oled display variable
-unsigned long lastTime = 0;                                  // Delay variable
-unsigned long lastSendTime = 0;                              // Delay variable
+unsigned long lastTimeDelay = 0;                             
+unsigned long lastSendTime = 0;
+unsigned long lastReceiveTime = 0;
+unsigned long lastWsTime = 0;
 String backendIP = "192.168.1.6:5000";                       // Backend IP address and its port
 String jwtToken = "";                                        // JWT token variable
 DHT22Data data = {0, 0, false};                              // DHT22 received data
@@ -64,19 +66,18 @@ bool sendingStatus[2] = {false, false};                      // flag to check th
 bool loginFlag = false;                                      // flag to identify whether you have logan or not
 AsyncWebServer server(80);                                   // ESP32 server listening on port 80
 AsyncWebSocket ws("/ws");                                    // ESP32 websocket handle
-bool webserverFlag = false;                                  // flag to check whether esp32 was set as webserver
+bool webserverButton = false;                                // flag to check whether webserverButton was pressed
 bool websocketFlag = false;                                  // flag to check whether esp32 was set as websocket
 bool websocketConnected = false;                             // flag to check whether websocket connection was established
 bool realtimeFlag = false;                                   // flag to check the realtime mode
 double temperatureRange[2] = {0, 0};                         // array containing lowest and highest temperature level
 double humidityRange[2] = {0, 0};                            // array containing lowest and highest humidity level
-bool temperatureRangeFlag = false;                           // flag to check whether the website has sent the temperature range command
-bool humidityRangeFlag = false;                              // flag to check whether the website has sent the humidity range command
 const char *sourceId = "20";                                 // define the LoRa Id of this esp32 device
 const char *seperateCharacter = ",";                         // define the seperate character in the string of LoRa data
-bool cmdFlag = false;                                        // flag to check whether stm32 has finished the command
-uint8_t alarmCmd = 0;                                        // variable to check whether the user has sent the command to turn ON/OFF alarm
-bool alarm_status = 0;
+uint8_t cmdFlag = 0;                                         // 1: STM32F1 processed a command successfully, 2: STM32F1 failed to process a command
+bool alarm_status = 0;                                       // 0: Alarm mode is OFF, 1: Alarm mode is ON
+bool safeFlag = 0;                                           // 0: the temperature/humdity range is in safe range, 1: the temperature/humidity is in dangerous range
+bool postFlag = false;                                        // Flag for checking the POST process
 
 /* Function Prototype */
 // LED
@@ -85,25 +86,23 @@ void RGBLedConfig(char color); // Function to change the color of RGB led
 void LoRaConfig(int nss, int rst, int di0); // LoRa configuration
 void LoRaHandle();                          // Handle with LoRa connection
 void LoRaSend(const char *desID, const char *message);  // LoRa send data function
-DHT22Data LoRaReceive();                    // LoRa receive data
+void LoRaReceive();                    // LoRa receive data
 // WiFi
 void WiFiHandle(); // Handle with WiFi connection
 // HTTP request
 double GetLatestTemperature(String jwtToken);       // Get the latest temperature value in the database
 bool PostTemperature(double temp); // Add a new temperature value to the database
 bool PostHumidity(double humid);   // Add a new temperature value to the database
-void SendDataToServer(double temperature);          // Send data to server
 String PostLogin();                                 // Login as an admin
 void WebServerConfig();                             // ESP32 WebServer configuration
 // Interrupt Service Routine
 void IRAM_ATTR WiFiButtonEvent();       // Button interrupt handler
 void IRAM_ATTR LoRaButtonEvent();       // Button interrupt handler
 void IRAM_ATTR WiFiResetEvent();        // Button interrupt handler
-void IRAM_ATTR LoRaReceptionEvent();    // LoRa reception interrupt handler
 void IRAM_ATTR ServerListeningEvent();  // Server listening interrupt handler
 
 // Buzzer
-void BuzzerTrigger(); // Buzzer trigger
+void BuzzerTrigger(); // Buzzer triggerx
 // Delay
 void Delayms(unsigned long ms); // User defined delay milisecond
 // Oled
@@ -115,8 +114,6 @@ void WebapiStatusDisplay();                  // Web API status Oled display
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void initWebSocket();
-
-void onReceive(int packetSize);
 
 /******************************************************************** SETUP ************************************************************************************/
 void setup()
@@ -167,7 +164,6 @@ void setup()
   attachInterrupt(WIFI_RESET_BUTTON, WiFiResetEvent, FALLING);
   attachInterrupt(SERVER_LISTENING_BUTTON, ServerListeningEvent, FALLING);
   attachInterrupt(loraButton.pinNumber, LoRaButtonEvent, CHANGE);
-  // attachInterrupt(DI0, LoRaReceptionEvent, RISING);
 }
 
 /******************************************************************** LOOP *************************************************************************************/
@@ -192,100 +188,94 @@ void loop()
   {
     LoRaHandle();
   }
-  // Receive data from stm32f1 over LoRa
-  if (loraButton.connect)
+  // Check whether user has pressed the server  button 
+  if (webserverButton == true)
   {
-    data = LoRaReceive(); // receive dht22 data
+    if (websocketFlag == true)
+    {
+      // Webserver configuration
+      initWebSocket();
+      WebServerConfig();
+      server.begin();
+    }
+    else
+    {
+      ws.closeAll();
+    }
+    webserverButton = false;
   }
-  // Set esp32 as a server
-  if (webserverFlag == true)
+  if (millis() - lastReceiveTime > 100)
   {
-    // Webserver configuration
-    initWebSocket();
-    WebServerConfig();
-    server.begin();
-    webserverFlag = false;
+    // Receive data from stm32f1 over LoRa
+    if (loraButton.connect)
+    {
+      LoRaReceive(); // receive dht22 data
+    }
+    OledDisplay(data.temp, data.humid); // display data on OLED
   }
-  OledDisplay(data.temp, data.humid); // display data on OLED
-  Delayms(50);
+  // Check if esp32 has received LoRa data
   if (data.received == true)
   {
+    // Check if the temperature/humidity is in dangerous range
+    if (safeFlag == 1)
+    {
+      BuzzerTrigger();
+    }
+    
+    // Check for WiFi connection
     if (wifiButton.connect == true)
     {
-      // Check if esp32 has received LoRa data
-      // Check the command status
-      if (cmdFlag == false)
+      if (cmdFlag == 1)
       {
-        if (alarmCmd == 1)
+        ws.textAll("message,The command is sent successfully");
+        if(postFlag == false)
         {
-          LoRaSend("10", "1,ON");
-          Delayms(100);
-        }
-        else if (alarmCmd == 2)
-        {
-          LoRaSend("10", "1,OFF");
-          Delayms(10);
-        }
-        if (temperatureRangeFlag == true)
-        {
-          char message[20];
-          sprintf(message, "2,%0.1lf,%0.1lf", temperatureRange[0], temperatureRange[1]);
-          LoRaSend("10", message);
-          Delayms(100);
-        }
-        if (humidityRangeFlag == true)
-        {
-          char message[20];
-          sprintf(message, "3,%0.1lf,%0.1lf", humidityRange[0], humidityRange[1]);
-          LoRaSend("10", message);
-          Delayms(100);
+          cmdFlag = 0;
         }
       }
-      else if (cmdFlag == true)
+      else if (cmdFlag == 2)
       {
-        if (alarmCmd == 1 || alarmCmd == 2)
+        ws.textAll("message,Failed to send the command. Please try again!");
+        if (postFlag == false)
         {
-          alarmCmd = 0;
+          cmdFlag = 0;
         }
-        if (temperatureRangeFlag == true)
-        {
-          temperatureRangeFlag = false;
-        }
-        if (humidityRangeFlag == true)
-        {
-          humidityRangeFlag = false;
-        }
-        ws.textAll("message,The command is sent successfully");
       }
       // POST data to webserver
-      if (sendingFlag == true)
-      {
-        if (millis() - lastSendTime > 5000)
+        if (sendingFlag == true)
         {
-          PostTemperature(data.temp);
-          Delayms(10);
-          PostHumidity(data.humid);
-          if (sendingStatus[0] == true && sendingStatus[1] == true)
+          if (millis() - lastSendTime > 5000)
           {
-            ws.textAll("Succeeded");
+            PostTemperature(data.temp);
+            Delayms(10);
+            PostHumidity(data.humid);
+            if (sendingStatus[0] == true && sendingStatus[1] == true)
+            {
+              ws.textAll("Succeeded");
+              data.received = false;
+            }
+            else
+            {
+              ws.textAll("Failed");
+            }
+            lastSendTime = millis();
           }
-          else {
-            ws.textAll("Failed");
-          }
-          lastSendTime = millis();
         }
-      }
-      else 
-      {
-        ws.textAll("Failed");
-      }
+        else
+        {
+          ws.textAll("Failed");
+        }
       // PUSH data to the website directly
       if (realtimeFlag == true)
       {
-        String message = "data," + String(data.temp) + "," + String(data.humid) + "," + String(alarm_status);
-        ws.textAll(message);
+        if (millis() - lastWsTime > 10)
+        {
+          String message = "data," + String(data.temp) + "," + String(data.humid) + "," + String(alarm_status);
+          ws.textAll(message);
+          data.received = false;
+          lastWsTime = millis();
+        }
       }
-      data.received = false;
     }
   }
 }
@@ -346,6 +336,7 @@ bool PostTemperature(double temp)
 
   /* Begin to send POST request to the server */
   HTTPClient http;
+  postFlag = true;
   http.begin(postTemperatureUrl);
   int responseCode = http.POST("");
   if (responseCode == 200)
@@ -353,16 +344,18 @@ bool PostTemperature(double temp)
     Serial.print("responseCode: ");
     Serial.println(responseCode);
     sendingStatus[0] = true;
-    return true;
     http.end();
+    postFlag = false;
+    return true;
   }
   else
   {
     Serial.print("Error Code: ");
     Serial.println(responseCode);
     sendingStatus[0] = false;
-    return false;
     http.end();
+    postFlag = false;
+    return false;
   }
 }
 
@@ -378,6 +371,7 @@ bool PostHumidity(double humid)
 
   /* Begin to send POST request to the server */
   HTTPClient http;
+  postFlag = true;
   http.begin(postHumidityUrl);
   int responseCode = http.POST("");
   if (responseCode == 200)
@@ -385,16 +379,18 @@ bool PostHumidity(double humid)
     Serial.print("responseCode: ");
     Serial.println(responseCode);
     sendingStatus[1] = true;
-    return true;
     http.end();
+    postFlag = false;
+    return true;
   }
   else
   {
     Serial.print("Error Code: ");
     Serial.println(responseCode);
     sendingStatus[1] = false;
-    return false;
     http.end();
+    postFlag = false;
+    return false;
   }
 }
 
@@ -542,14 +538,6 @@ void LoRaConfig(int nss, int rst, int di0)
 
   LoRa.setSignalBandwidth(250E3);
 
-  // LoRa.setSpreadingFactor(6); // ranges from 6-12,default 7 see API docs
-
-  // // register the receive callback
-  // LoRa.onReceive(onReceive);
-
-  // // put the radio into receive mode
-  // LoRa.receive();
-
   // Change sync word (0xF1) to match the receiver LoRa
   // This code ensure that you don't get LoRa messages
   // from other LoRa transceivers
@@ -653,8 +641,8 @@ void BuzzerTrigger(void)
 /* User defined delay milisecond */
 void Delayms(unsigned long ms)
 {
-  lastTime = millis();
-  while (millis() < lastTime + ms)
+  lastTimeDelay = millis();
+  while (millis() < lastTimeDelay + ms)
     ;
 }
 
@@ -662,12 +650,20 @@ void Delayms(unsigned long ms)
 void OledDisplay(double temp, double humid)
 {
   display.setCursor(0, 0);
-  if (data.received == true)
+  if (data.received == true && loraButton.connect)
   {
     display.clearDisplay();
     WiFiStatusDislay();
     WebapiStatusDisplay();
     LoRaStatusDisplay();
+    if (safeFlag == 0)
+    {
+      display.println("Safe Range");
+    }
+    else
+    {
+      display.println("Dangerous Range");
+    }
     display.print("Temperature: ");
     display.println(String(temp));
     display.print("Humidity: ");
@@ -728,32 +724,32 @@ void WiFiStatusDislay()
   {
     RGBLedConfig('R');
     display.println("WiFi: Disconnected");
+    display.println("");
   }
   else
   {
     RGBLedConfig('G');
     display.println("WiFi: Connected");
-    display.print("SSID: ");
-    display.println(String(WiFi.SSID()));
     display.print("IP: ");
     display.println(WiFi.localIP());
   }
 }
 
 /* LoRa receive data */
-DHT22Data LoRaReceive()
+void LoRaReceive()
 {
-  String LoRaData;                     // LoRa data
-  char *rcvSrcId;                      // pointer to source ID
-  char *rcvDesId;                      // pointer to destination ID
-  char *temp;                          // pointer to temperature
-  char *humid;                         // pointer to humidity
-  char *cmdStatus;                     // pointer to command status
-  char *alarmStatus;                   // pointer to alarm status
-  DHT22Data data = {0, 0, false};      // DHT22 data
-  char rcvData[20];                    // array containing String of LoRa data
-  char buffer[20];                     // array containing seperate components in array of LoRa data
-  int packetSize = LoRa.parsePacket(); // LoRa data packet size received from LoRa sender
+  String LoRaData;                    // LoRa data
+  char *rcvSrcId;                     // pointer to source ID
+  char *rcvDesId;                     // pointer to destination ID
+  char *sendingType;                  // pointer to sendingType (data or status packet)
+  char *temp;                         // pointer to temperature
+  char *humid;                        // pointer to humidity
+  char *safety;                       // pointer to the safety check
+  char *cmdStatus;                    // pointer to command status
+  char *alarmStatus;                  // pointer to alarm status
+  char rcvData[50];                   // array containing String of LoRa data
+  char buffer[50];                    // array containing seperate components in array of LoRa data
+  int packetSize = LoRa.parsePacket();// LoRa data packet size received from LoRa sender
   // Check if the packer size is large than 0
   if (packetSize)
   {
@@ -763,51 +759,83 @@ DHT22Data LoRaReceive()
       LoRaData = LoRa.readString();
     }
 
-    // Get information from the received string: "source_id,destination_id,temperature,humidity"
-    LoRaData.toCharArray(rcvData, LoRaData.length() + 1); // Convert String format to array format
-    rcvSrcId = strtok(rcvData, ",");                      // return the pointer to the source_id
-    rcvDesId = strtok(NULL, ",");                         // continue to return the pointer to the destination_id
-    temp = strtok(NULL, ",");                             // continue to return the pointer to the temperature
-    humid = strtok(NULL, ",");                            // continue to return the pointer to the humidity
-    cmdStatus = strtok(NULL, ",");                        // continue to return the pointer to the command status
-    alarmStatus = strtok(NULL, ",");                      // continue to return the pointer to the alarm status
+      // Get information from the received string: "source_id,destination_id,temperature,humidity"
+      LoRaData.toCharArray(rcvData, LoRaData.length() + 1); // Convert String format to array format
+      rcvSrcId = strtok(rcvData, ",");                      // return the pointer to the source_id
+      rcvDesId = strtok(NULL, ",");                         // continue to return the pointer to the destination_id
+      if (rcvSrcId != NULL && rcvDesId != NULL)
+      {
+        // Check if the destination_id is correct
+        if (!strcmp(rcvDesId, sourceId))
+        {
+          sendingType = strtok(NULL, ","); // continue to return the pointer to the sending type
+          if (sendingType != NULL)
+          {
+            // Check if the packet is for data
+            if (!strcmp(sendingType, "0"))
+            {
+              temp = strtok(NULL, ",");   // continue to return the pointer to the temperature
+              humid = strtok(NULL, ",");  // continue to return the pointer to the humidity
+              safety = strtok(NULL, ","); // continue to return the pointer to the safety flag
+              if (temp != NULL && humid != NULL && safety != NULL)
+              {
+                // Convert to double type
+                strcpy(buffer, temp);               // copy the temperature string to the buffer
+                sscanf(buffer, "%lf", &data.temp);  // convert the temperature string to double type
+                strcpy(buffer, humid);              // copy the humidity string to the buffer
+                sscanf(buffer, "%lf", &data.humid); // convert the humidity string to double type
+                
+                // Check the safety of temperature/humidity range
+                if (!strcmp(safety, "1"))
+                {
+                  safeFlag = 1;
+                }
+                else
+                {
+                  safeFlag = 0;
+                }
 
-    // Check if the destination_id is correct
-    if (!strcmp(rcvDesId, sourceId))
-    {
-      // Convert to double type
-      strcpy(buffer, temp);               // copy the temperature string to the buffer
-      sscanf(buffer, "%lf", &data.temp);  // convert the temperature string to double type
-      strcpy(buffer, humid);              // copy the humidity string to the buffer
-      sscanf(buffer, "%lf", &data.humid); // convert the humidity string to double type
-
-      // Successful data reception
-      data.received = true;
-    }
-    else
-    {
-      // Failed to receive data
-      data.received = false;
-    }
-
-    // Check the command status
-    if (!strcmp(cmdStatus, "1"))
-    {
-      cmdFlag = true;
-    }
-    else if (!strcmp(cmdStatus, "0"))
-    {
-      cmdFlag = false;
-    }
-    // Check the alarm status
-    if (!strcmp(alarmStatus, "1"))
-    {
-      alarm_status = 1;
-    }
-    else if (!strcmp(alarmStatus, "0"))
-    {
-      alarm_status = 0;
-    }
+                // Successful data reception
+                data.received = true;
+              }
+              else
+              {
+                // Failed to receive data reception
+                data.received = false;
+              }
+            }
+            // Check if the packet is for status
+            else if (!strcmp(sendingType, "1"))
+            {
+              cmdStatus = strtok(NULL, ",");   // continue to return the pointer to the command status
+              alarmStatus = strtok(NULL, ","); // continue to return the pointer to the alarm status
+              if(cmdStatus != NULL && alarmStatus != NULL)
+              {
+                // Check the command status
+                if (!strcmp(cmdStatus, "1"))
+                {
+                  cmdFlag = 1; // command processing succeeded
+                  Serial.println("cmd: 1");
+                }
+                else if (!strcmp(cmdStatus, "0"))
+                {
+                  cmdFlag = 2; // command processing failed
+                  Serial.println("cmd: 2");
+                }
+                // Check the alarm status
+                if (!strcmp(alarmStatus, "1"))
+                {
+                  alarm_status = 1;
+                }
+                else if (!strcmp(alarmStatus, "0"))
+                {
+                  alarm_status = 0;
+                }
+              }
+            }
+          }
+        }
+      }
 
 // Serial Monitoring Verification
 #if SERIAL_MONITOR
@@ -829,77 +857,6 @@ DHT22Data LoRaReceive()
     Serial.println(cmdStatus);
     Serial.print("\n\n\n");
 #endif
-  }
-  return data;
-}
-
-/* Receive mode */
-void onReceive(int packetSize)
-{
-  if (packetSize == 0)
-    return; // if there's no packet, return
-
-  String LoRaData;                     // LoRa data
-  char *rcvSrcId;                      // pointer to source ID
-  char *rcvDesId;                      // pointer to destination ID
-  char *temp;                          // pointer to temperature
-  char *humid;                         // pointer to humidity
-  char *cmdStatus;                     // pointer to command status
-  char *alarmStatus;                   // pointer to alarm status
-  char rcvData[20];                    // array containing String of LoRa data
-  char buffer[20];                     // array containing seperate components in array of LoRa data
-  // Receive the data from LoRa sender in String format
-  while (LoRa.available())
-  {
-    LoRaData = LoRa.readString();
-  }
-
-  // Get information from the received string: "source_id,destination_id,temperature,humidity"
-  LoRaData.toCharArray(rcvData, LoRaData.length() + 1); // Convert String format to array format
-  rcvSrcId = strtok(rcvData, ",");                      // return the pointer to the source_id
-  rcvDesId = strtok(NULL, ",");                         // continue to return the pointer to the destination_id
-  temp = strtok(NULL, ",");                             // continue to return the pointer to the temperature
-  humid = strtok(NULL, ",");                            // continue to return the pointer to the humidity
-  cmdStatus = strtok(NULL, ",");                        // continue to return the pointer to the command status
-  alarmStatus = strtok(NULL, ",");                      // continue to return the pointer to the alarm status
-
-  // Check if the destination_id is correct
-  if (!strcmp(rcvDesId, sourceId))
-  {
-    // Convert to double type
-    strcpy(buffer, temp);               // copy the temperature string to the buffer
-    sscanf(buffer, "%lf", &data.temp);  // convert the temperature string to double type
-    strcpy(buffer, humid);              // copy the humidity string to the buffer
-    sscanf(buffer, "%lf", &data.humid); // convert the humidity string to double type
-
-    // Successful data reception
-    data.received = true;
-  }
-  else
-  {
-    // The ID does not match 
-    data.received = false;
-    Serial.println("This message is not for me.");
-    return;
-  }
-
-  // Check the command status
-  if (!strcmp(cmdStatus, "1"))
-  {
-    cmdFlag = true;
-  }
-  else if (!strcmp(cmdStatus, "0"))
-  {
-    cmdFlag = false;
-  }
-  // Check the alarm status
-  if (!strcmp(alarmStatus, "1"))
-  {
-    alarm_status = 1;
-  }
-  else if (!strcmp(alarmStatus, "0"))
-  {
-    alarm_status = 0;
   }
 }
 
@@ -927,11 +884,13 @@ void onReceive(int packetSize)
         message = request->getParam("Status")->value();
         if (message == "ON")
         {
-          alarmCmd = 1;
+          LoRaSend("10", "1,ON");
+          Delayms(10);
         }
         else if (message == "OFF") 
         {
-          alarmCmd = 2;
+          LoRaSend("10", "1,OFF");
+          Delayms(10);
         }
         else
         {
@@ -947,21 +906,18 @@ void onReceive(int packetSize)
 
     // Send a GET request to start sending data to asp.net webserver
     server.on("/Start", HTTP_GET, [](AsyncWebServerRequest *request){
-      BuzzerTrigger();
       sendingFlag = true;
       request->send(200, "text/plain", "Start request is sent successfully"); }
     );
 
     // Send a GET request to stop sending data to asp.net webserver
     server.on("/Stop", HTTP_GET, [](AsyncWebServerRequest *request){
-      BuzzerTrigger();
       sendingFlag = false;
       request->send(200, "text/plain", "Stop request is sent successfully"); }
     );
 
     // Send a GET request to open/close the realtime mode
     server.on("/Realtime", HTTP_GET, [](AsyncWebServerRequest *request){
-      BuzzerTrigger();
       String message;
       if (request->hasParam("Status"))
       {
@@ -990,7 +946,6 @@ void onReceive(int packetSize)
       }
       else
       {
-        temperatureRangeFlag = false;
         request->send(400, "text/plain", "Bad request");
       }
       if (request->hasParam("Highest"))
@@ -1001,15 +956,16 @@ void onReceive(int packetSize)
       }
       else
       {
-        temperatureRangeFlag = false;
         request->send(400, "text/plain", "Bad request");
       }
       if (temperatureRange[1] < temperatureRange[0])
       {
-        temperatureRangeFlag = false;
         request->send(400, "text/plain", "Bad request");
       }
-      temperatureRangeFlag = true;
+      char message[20];
+      sprintf(message, "2,%0.1lf,%0.1lf", temperatureRange[0], temperatureRange[1]);
+      LoRaSend("10", message);
+      Delayms(10);
       request->send(200, "text/plain", "Received request successfully");}
     );
 
@@ -1024,7 +980,6 @@ void onReceive(int packetSize)
       }
       else
       {
-        humidityRangeFlag = false;
         request->send(400, "text/plain", "Bad request");
       }
       if (request->hasParam("Highest"))
@@ -1035,15 +990,16 @@ void onReceive(int packetSize)
       }
       else
       {
-        humidityRangeFlag = false;
         request->send(400, "text/plain", "Bad request");
       }
       if (humidityRange[1] < humidityRange[0])
       {
-        humidityRangeFlag = false;
         request->send(400, "text/plain", "Bad request");
       }
-      humidityRangeFlag = true;
+      char message[20];
+      sprintf(message, "3,%0.1lf,%0.1lf", humidityRange[0], humidityRange[1]);
+      LoRaSend("10", message);
+      Delayms(10);
       request->send(200, "text/plain", "Received request successfully"); }
     );
     }
@@ -1104,6 +1060,6 @@ void IRAM_ATTR ServerListeningEvent()
 {
   Delayms(50);
   BuzzerTrigger();
-  webserverFlag = true;
-  websocketFlag = true;
+  websocketFlag = !websocketFlag;
+  webserverButton = true;
 }

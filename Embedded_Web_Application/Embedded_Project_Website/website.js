@@ -299,19 +299,12 @@ $(".ws-connect-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
   esp32IP = $(".esp32-ip-search")[0].value;
-  $(".ws-connect-button").hide();
-  $(".ws-disconnect-button").fadeIn();
-  $("#temperature-chart").fadeIn();
-  $("#humidity-chart").fadeIn();
   WebsocketInit(esp32IP);
 });
 // Websocket disconnect button
 $(".ws-disconnect-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  $(".ws-connect-button").fadeIn();
-  $(".ws-disconnect-button").hide();
-  // $(".esp32-ip-search")[0].value = "";
   socket.close();
 });
 
@@ -1118,10 +1111,9 @@ async function AlarmHandle(option) {
 async function SendHandle(option) {
   if (option === "Send") {
     /* Send command to ESP32 Web Server to send the temperature humidity values */
-    const response =  await fetch(`http://${esp32IP}/Start`, {
+    await fetch(`http://${esp32IP}/Start`, {
       mode: "no-cors"
     });
-    console.log(response);
   } else if (option === "Unsend") {
     /* Send command to ESP32 Web Server to stop sending the temperature and humidity values */
     await fetch(`http://${esp32IP}/Stop`, {
@@ -1159,6 +1151,10 @@ function WebsocketInit(esp32IP) {
   socket.onopen = (event) => {
     console.log("WebSocket connection opened");
     alert("WebSocket connection opened");
+    $(".ws-connect-button").hide();
+    $(".ws-disconnect-button").fadeIn();
+    $("#temperature-chart").fadeIn();
+    $("#humidity-chart").fadeIn();
     RealtimeMode("ON");
   };
   // Listening the message from other devices
@@ -1196,9 +1192,13 @@ function WebsocketInit(esp32IP) {
     if (event.wasClean) {
       console.log("WebSocket connection closed cleanly");
       alert("WebSocket connection closed cleanly");
+        $(".ws-connect-button").fadeIn();
+        $(".ws-disconnect-button").hide();
     } else {
       console.error("WebSocket connection abruptly closed");
       alert("WebSocket connection abruptly closed");
+        $(".ws-connect-button").fadeIn();
+        $(".ws-disconnect-button").hide();
     }
     RealtimeMode("OFF");
     realtimeTemperature = null;

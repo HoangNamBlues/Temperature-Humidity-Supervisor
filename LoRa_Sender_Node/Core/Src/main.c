@@ -57,11 +57,9 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
-UART_HandleTypeDef huart1;
-
 /* USER CODE BEGIN PV */
 LoRa myLoRa;								// LoRa handle
-char lora_data[100];						// buffer containing the transmitted data to esp32
+char lora_buffer[100];						// buffer containing the transmitted data to esp32
 char received_data[20];						// buffer containing the received data from esp32
 const char* srcId = "10";					// stm32 address
 const char* desId = "20";					// esp32 address
@@ -74,6 +72,8 @@ uint8_t dht22Status = 0;					// variable to check whether the dht22 data is rece
 uint8_t loraStatus = 0;						// variable to check whether the LoRa data is transmitted successfully
 int cmdStatus = 0;							// variable to check whether the command is processed successfully
 int alarmStatus = 0;						// alarm status
+int safety = 0;								// safety status
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,13 +83,13 @@ static void MX_SPI2_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
-void Packet_Encapsulation(char* buffer, int src_id, int des_id, double temp, double humid, int cmd_status, int alarm_status);
+void Data_Packet_Encapsulation(char* buffer, int src_id, int des_id, int sendingType, double temp, double humid, int safety);
+void Status_Packet_Encapsulation(char* buffer, int src_id, int des_id, int sendingType, int cmd_status, int alarm_status);
 void Lcd_Sytem_State_Print(uint8_t mode);
 void Long_Pressed_Button(void);
-void Alarm_Check(double temp, double humid);
+int Alarm_Check(double temp, double humid);
 void LoRa_Receive_Handle();
 /* USER CODE END PFP */
 
@@ -130,7 +130,6 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_I2C1_Init();
-  MX_USART1_UART_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 	// Initialize Timer 2 / Timer 3
@@ -142,7 +141,7 @@ int main(void)
 	{
 		// DHT22 doesn't response
 		// Re-Initilize again
-		Delay_Ms(200);
+		Delay_Ms(2000);
 	}
 
 	// Initialize LCD
@@ -228,12 +227,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -345,11 +345,11 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 63;
+  htim2.Init.Prescaler = 71;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
@@ -390,11 +390,11 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 64000-1;
+  htim3.Init.Prescaler = 36000-1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
@@ -435,9 +435,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 64000-1;
+  htim4.Init.Prescaler = 36000-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 300;
+  htim4.Init.Period = 4000;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -462,39 +462,6 @@ static void MX_TIM4_Init(void)
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -507,6 +474,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
@@ -517,7 +485,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, DHT22_Pin|BUZZER_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, NSS_Pin|RST_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, RST_Pin|NSS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : LED_Pin */
   GPIO_InitStruct.Pin = LED_Pin;
@@ -539,18 +507,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NSS_Pin RST_Pin */
-  GPIO_InitStruct.Pin = NSS_Pin|RST_Pin;
+  /*Configure GPIO pin : DIO0_Pin */
+  GPIO_InitStruct.Pin = DIO0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : RST_Pin NSS_Pin */
+  GPIO_InitStruct.Pin = RST_Pin|NSS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : DIO0_Pin */
-  GPIO_InitStruct.Pin = DIO0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
@@ -586,7 +554,7 @@ void Delay_Us(uint32_t us)
 void Delay_Ms(uint32_t ms)
 {
 	__HAL_TIM_SET_COUNTER(&htim3, 0); // set counter value to 0
-	while (__HAL_TIM_GET_COUNTER(&htim3) < ms)
+	while (__HAL_TIM_GET_COUNTER(&htim3) < ms*2)
 		; // wait for the counter to reach the us input in the parameter
 }
 
@@ -712,10 +680,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 }
 
-// Encapsulate the data into a packet containing the string: "source_id,destination_id,temperature,humidity"
-void Packet_Encapsulation(char* buffer ,int src_id, int des_id, double temp, double humid, int cmd_status, int alarm_status)
+// Encapsulate the data into a packet containing the string: "source_id, destination_id, sendingType, temperature, humidity, safety"
+void Data_Packet_Encapsulation(char* buffer ,int src_id, int des_id, int sendingType, double temp, double humid, int safety)
 {
-	sprintf(buffer, "%d,%d,%0.1lf,%0.1lf,%d,%d", src_id, des_id, temp, humid,cmd_status,alarm_status);
+	sprintf(buffer, "%d,%d,%d,%0.1lf,%0.1lf,%d", src_id, des_id, sendingType, temp, humid, safety);
+}
+
+// Encapsulate the status into a packet containing the string: "source_id,destination_id, sendingType, cmd_status, alarm_status"
+void Status_Packet_Encapsulation(char* buffer ,int src_id, int des_id, int sendingType, int cmd_status, int alarm_status)
+{
+	sprintf(buffer, "%d,%d,%d,%d,%d", src_id, des_id, sendingType, cmd_status, alarm_status);
 }
 
 // System state LCD print
@@ -962,7 +936,7 @@ void Long_Pressed_Button(void)
 }
 
 // Alarm checking
-void Alarm_Check(double temp, double humid)
+int Alarm_Check(double temp, double humid)
 {
 	// Check if the alarm is turned ON
 	if(!HAL_GPIO_ReadPin(LED_GPIO_Port, LED_Pin))
@@ -977,7 +951,7 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too high");
 			lcd_put_cursor(1, 2);
 			lcd_send_string("Temperature");
-			Delay_Ms(200);
+			return 1;
 		}
 		if(temp < temp_setpoint[0])
 		{
@@ -988,7 +962,7 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too low");
 			lcd_put_cursor(1, 2);
 			lcd_send_string("Temperature");
-			Delay_Ms(200);
+			return 1;
 		}
 
 		// Check the humidity value
@@ -1001,7 +975,7 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too high");
 			lcd_put_cursor(1, 4);
 			lcd_send_string("Humidity");
-			Delay_Ms(200);
+			return 1;
 		}
 		if(humid < humid_setpoint[0])
 		{
@@ -1012,9 +986,10 @@ void Alarm_Check(double temp, double humid)
 			lcd_send_string("Too low");
 			lcd_put_cursor(1, 4);
 			lcd_send_string("Humidity");
-			Delay_Ms(200);
+			return 1;
 		}
 	}
+	return 0;
 }
 
 // LoRa receive data handle
@@ -1074,6 +1049,21 @@ void LoRa_Receive_Handle()
 			humid_setpoint[1] = d;
 			cmdStatus = 1;
 		}
+
+		// Stop timer 4
+		HAL_TIM_Base_Stop_IT(&htim4);
+
+		/* LoRa status encapsulation */
+		Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, cmdStatus, alarmStatus);
+		Delay_Ms(200);
+
+		/* LoRa sending data */
+		LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+
+		cmdStatus = 0;
+
+		// Start timer 4 again
+		HAL_TIM_Base_Start_IT(&htim4);
 	}
 }
 
@@ -1086,32 +1076,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 		if(dht22Status == 1)
 		{
-			/* LoRa sending */
-			Packet_Encapsulation(lora_data, 10, 20, dht22Data.temperature, dht22Data.humidity, cmdStatus, alarmStatus);
+			/* Check the temperature and humidity level */
+			safety = Alarm_Check(dht22Data.temperature, dht22Data.humidity); // 0: safe, 1: unsafe
+
+			/* LoRa data encapsulation */
+			Data_Packet_Encapsulation(lora_buffer, 10, 20, 0, dht22Data.temperature, dht22Data.humidity, safety);
 
 			/* LoRa sending data */
-			loraStatus = LoRa_transmit(&myLoRa, (uint8_t*) lora_data, strlen(lora_data), 100);
-
-			/* Check if the command was processed successfully */
-			if (loraStatus == 1 && cmdStatus == 1)
-			{
-				cmdStatus = 0;
-			}
+			LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
 		}
 
-		else
+		if (safety == 0)
 		{
-			cmdStatus = 0;
+			/* Print DHT22 data onto LCD */
+			Lcd_Sytem_State_Print(mode);
+
+			/* Handle when the increase/decrease button is pressed a long time */
+			Long_Pressed_Button();
 		}
-
-		/* Check the temperature and humidity level */
-		Alarm_Check(dht22Data.temperature, dht22Data.humidity);
-
-		/* Print DHT22 data onto LCD */
-		Lcd_Sytem_State_Print(mode);
-
-		/* Handle when the increase/decrease button is pressed a long time */
-		Long_Pressed_Button();
 	}
 }
 
