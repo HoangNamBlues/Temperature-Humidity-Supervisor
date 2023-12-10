@@ -70,8 +70,13 @@ void Buzzer_Trigger(void);
 #define DES_BUTTON_Pin GPIO_PIN_3
 #define DES_BUTTON_GPIO_Port GPIOA
 #define DES_BUTTON_EXTI_IRQn EXTI3_IRQn
+#define RELAY_BUTTON_Pin GPIO_PIN_4
+#define RELAY_BUTTON_GPIO_Port GPIOA
+#define RELAY_BUTTON_EXTI_IRQn EXTI4_IRQn
 #define DHT22_Pin GPIO_PIN_5
 #define DHT22_GPIO_Port GPIOA
+#define RELAY_Pin GPIO_PIN_0
+#define RELAY_GPIO_Port GPIOB
 #define DIO0_Pin GPIO_PIN_10
 #define DIO0_GPIO_Port GPIOB
 #define DIO0_EXTI_IRQn EXTI15_10_IRQn

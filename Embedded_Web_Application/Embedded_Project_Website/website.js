@@ -38,7 +38,10 @@ let realtimeHumidity = null;
 let socketData = [0];
 let socket = null;                                          // Websocket handle
 let esp32IP = null;                                         // IP address of esp32 
-let alarmStatus = null;                                     // status of the alarm on stm32f1
+let backendIp = null;                                       // Backend ip address
+let alarmStatus = null;                                     // status of the alarm on SMT32F1 
+let bulbStatus = null;                                      // status of the bulb on STM32F1 
+let url = null;                                             // URL to access data in backend                        
 
 // Google Chart API configuration
 // load current chart package
@@ -64,12 +67,14 @@ $("form").hide();
 $(".side-bar").hide();
 if (logFlag === "logged") {
   Unlock();
+  $(".user-button").fadeIn();
   $(".register-button").text("Refresh");
   $(".login-button").text("Logout");
   $(".user-name").text(userName);
   $(".token-timeout").text(`Expiration Time: ${jwtTimeout[0]}:${jwtTimeout[1]}`);
 }
 else {
+  $(".user-button").hide();
   // Block table control
   Block();
 }
@@ -181,6 +186,18 @@ $(".login-button").click(function () {
   }
 });
 
+// Add click event for user button using Jquery
+$(".user-button").click(function () {
+  // Audio
+  var audio = new Audio("./Audio/Back-Sound.mp3");
+  audio.play();
+  let jwtTimout = TimeoutDisplay(0, localStorage.getItem("jwtExpirationTime"));
+  let refreshTimeout = TimeoutDisplay(1, localStorage.getItem("refreshExpirationTime"));
+  alert(`Username: ${localStorage.getItem("userName")}
+  \nJWT's expiration-time: ${jwtTimeout[3]}/${jwtTimeout[4]}/${jwtTimeout[5]}, ${jwtTimeout[0]}:${jwtTimeout[1]}
+  \nRefresh Token's expiration-time: ${refreshTimeout[3]}/${refreshTimeout[4]}/${refreshTimeout[5]}, ${refreshTimeout[0]}:${refreshTimeout[1]}`);
+});
+
 // Add double click event for logout button using Jquery
 $(".login-button").dblclick(function () {
   if ($(".login-button").text() == "Logout") {
@@ -200,6 +217,7 @@ $(".login-button").dblclick(function () {
     $("table tr").remove(".value-rows");
     Block();
     alert("Logout sucessfully");
+    $(".user-button").hide();
     $(".token-timeout").text("");
   }
 });
@@ -219,13 +237,6 @@ $(".option-button").click(function () {
 $(".buzzer-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  // if ($(".buzzer-state").text() === "OFF") {
-  //   $(".buzzer-state").text("ON");
-  //   AlarmHandle("ON");
-  // } else {
-  //   $(".buzzer-state").text("OFF");
-  //   AlarmHandle("OFF");
-  // }
   if (alarmStatus === "OFF") {
     AlarmHandle("ON");
   } else if (alarmStatus === "ON") {
@@ -254,14 +265,15 @@ $(".shrink-button").click(function () {
   $(".temperature-picture").removeClass("temperature-picture-shrink");
   $(".expand").fadeIn();
 });
-// Search button
-$(".search-button").click(function () {
-  $("table tr").remove(".value-rows"); // clear the row values of filter table
+// Bulb button
+$(".bulb-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  const searchInput = $(".date-search");
-  const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
-  SearchByDate(date);
+  if (bulbStatus === "OFF") {
+    BulbHandle("ON");
+  } else if (bulbStatus === "ON") {
+    BulbHandle("OFF");
+  }
 });
 // Average button
 $(".average-button").click(function () {
@@ -294,6 +306,17 @@ $(".stop-button").click(function () {
   $(".send-state").text("Processing...");
   SendHandle("Unsend");
 });
+// Export button
+$(".export-button").click(function () {
+  var audio = new Audio("./Audio/classic-click.mp3");
+  audio.play();
+  if (option == 0) {
+    exportTableToExcel("tblData", "Temperature");
+  }
+  else if (option == 1) { 
+    exportTableToExcel("tblData", "Humidity");
+  }
+});
 // Websocket connect button
 $(".ws-connect-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
@@ -306,6 +329,14 @@ $(".ws-disconnect-button").click(function () {
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
   socket.close();
+});
+// Backend IP button
+$(".backend-ip-button").click(function () {
+  var audio = new Audio("./Audio/classic-click.mp3");
+  audio.play();
+  backendIp = $(".backend-ip-search")[0].value;
+  console.log(backendIp);
+  SendBackendIP(backendIp);
 });
 
 // Add click event for filter buttons using Jquery
@@ -325,7 +356,9 @@ $(".none-button").click(function () {
   $("table tr").remove(".value-rows"); // clear the row values of filter table
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  NoneFilter();
+  const searchInput = $(".date-search");
+  const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
+  NoneFilter(date);
 });
 
 $(".clear-button").click(function () {
@@ -338,7 +371,9 @@ $(".value-option-button-largest").click(function () {
   $("table tr").remove(".value-rows"); // clear the row values of filter table
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  DescendingFilter();
+  const searchInput = $(".date-search");
+  const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
+  DescendingFilter(date);
   StartFilter();
 });
 
@@ -346,7 +381,9 @@ $(".value-option-button-smallest").click(function () {
   $("table tr").remove(".value-rows"); // clear the row values of filter table
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  AscendingFilter();
+  const searchInput = $(".date-search");
+  const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
+  AscendingFilter(date);
   StartFilter();
 });
 
@@ -354,7 +391,9 @@ $(".time-option-button-oldest").click(function () {
   $("table tr").remove(".value-rows"); // clear the row values of filter table
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  OldestFilter();
+  const searchInput = $(".date-search");
+  const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
+  OldestFilter(date);
   StartFilter();
 });
 
@@ -362,7 +401,9 @@ $(".time-option-button-latest").click(function () {
   $("table tr").remove(".value-rows"); // clear the row values of filter table
   var audio = new Audio("./Audio/classic-click.mp3");
   audio.play();
-  LatestFilter();
+  const searchInput = $(".date-search");
+  const date = searchInput[0].value.split("/").reverse().join("-"); // convert the time format "dd/MM/yyyy" to "yyyy-MM-dd"
+  LatestFilter(date);
   StartFilter();
 });
 
@@ -374,11 +415,16 @@ $(".back-button").click(function () {
 
 /************************************************************* ADDITIONAL FUNCTIONS *************************************************************/
 
-/* Function to get all the temperature values */
-async function NoneFilter() {
+/* Function to get the arbitrary temperature/humidity values */
+async function NoneFilter(date = "") {
   if (option == 0) {
+    if (date === "") {
+      url = "https://localhost:5000/Api/Temperature";
+    } else {
+      url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
+    }
     /* Get data from the backend server */
-    await fetch("https://localhost:5000/Api/Temperature", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -399,8 +445,13 @@ async function NoneFilter() {
         $(".filter-table").append(htmlString);
       });
   } else {
+    if (date === "") {
+      url = "https://localhost:5000/Api/Humidity";
+    } else {
+      url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
+    }
     /* Get data from the backend server */
-    await fetch("https://localhost:5000/Api/Humidity", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -423,32 +474,16 @@ async function NoneFilter() {
   }
 }
 
-/* Function to get the latest temperature value */
-async function GetLatestTemperature() {
-  /* Get data from the backend server */
-  await fetch(`https://localhost:5000/Api/Temperature`, {
-    headers: {
-      Authorization: `Bearer ${jwtToken}`,
-    },
-  })
-    .then(
-      (response) => response.json() // convert the array response to json format, then waiting for this json response
-    )
-    .then((data) => {
-      data.sort(function (a, b) {
-        return a.temperatureTime.localeCompare(b.temperatureTime);
-      }); // sort data from the oldest time
-      $(".temperature-result").text(
-        `${data[data.length - 1].temperatureValue}`
-      );
-    });
-}
-
-/* Function to sort temperature and humidity values from the latest time */
-async function LatestFilter() {
+/* Function to sort temperature/humidity values from the latest time */
+async function LatestFilter(date = "") {
   if (option == 0) {
+     if (date === "") {
+       url = "https://localhost:5000/Api/Temperature";
+     } else {
+       url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
+     }
     /* Get temperature data from the backend server */
-    await fetch("https://localhost:5000/Api/Temperature", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -472,8 +507,13 @@ async function LatestFilter() {
         $(".filter-table").append(htmlString);
       });
   } else {
+    if (date === "") {
+      url = "https://localhost:5000/Api/Humidity";
+    } else {
+      url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
+    }
     /* Get humidity data from the backend server */
-    await fetch("https://localhost:5000/Api/Humidity", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -499,11 +539,16 @@ async function LatestFilter() {
   }
 }
 
-/* Function to sort temperature and humidity values from the oldest time */
-async function OldestFilter() {
+/* Function to sort temperature/humidity values from the oldest time */
+async function OldestFilter(date = "") {
   if (option == 0) {
+     if (date === "") {
+       url = "https://localhost:5000/Api/Temperature";
+     } else {
+       url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
+     }
     /* Get temperature data from the backend server */
-    await fetch("https://localhost:5000/Api/Temperature", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -527,8 +572,13 @@ async function OldestFilter() {
         $(".filter-table").append(htmlString);
       });
   } else {
+    if (date === "") {
+      url = "https://localhost:5000/Api/Humidity";
+    } else {
+      url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
+    }
     /* Get humidity data from the backend server */
-    await fetch("https://localhost:5000/Api/Humidity", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -554,11 +604,17 @@ async function OldestFilter() {
   }
 }
 
-/* Function to sort temperature and humidity values from the largest value */
-async function DescendingFilter() {
+/* Function to sort temperature/humidity values from the largest value */
+async function DescendingFilter(date = "") {
   if (option == 0) {
-    /* Get temperature data from the backend server */
-    await fetch("https://localhost:5000/Api/Temperature", {
+    if (date === "") {
+      url = "https://localhost:5000/Api/Temperature";
+    }
+    else { 
+      url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
+    }
+      /* Get temperature data from the backend server */
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -573,17 +629,24 @@ async function DescendingFilter() {
         const htmlArray = data.map(
           (element) =>
             `<tr class="value-rows">
-            <td>${element.temperatureTimeString}</td>
-            <td>${element.temperatureValue}</td>
-            <td>&deg;C</td>
-          </tr>`
+          <td>${element.temperatureTimeString}</td>
+          <td>${element.temperatureValue}</td>
+          <td>&deg;C</td>
+        </tr>`
         );
         const htmlString = htmlArray.reverse().join(""); // reverse to sort data from the largest value
         $(".filter-table").append(htmlString);
       });
   } else {
+    if (date === "")
+    { 
+      url = "https://localhost:5000/Api/Humidity";
+    }
+    else { 
+      url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
+    }
     /* Get humidity data from the backend server */
-    await fetch("https://localhost:5000/Api/Humidity", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -598,10 +661,10 @@ async function DescendingFilter() {
         const htmlArray = data.map(
           (element) =>
             `<tr class="value-rows">
-            <td>${element.humidityTimeString}</td>
-            <td>${element.humidityValue}</td>
-            <td>%</td>
-          </tr>`
+          <td>${element.humidityTimeString}</td>
+          <td>${element.humidityValue}</td>
+          <td>%</td>
+        </tr>`
         );
         const htmlString = htmlArray.reverse().join(""); // reverse to sort data from the largest value
         $(".filter-table").append(htmlString);
@@ -609,11 +672,16 @@ async function DescendingFilter() {
   }
 }
 
-/* Function to sort temperature and humidity values from the smallest value */
-async function AscendingFilter() {
+/* Function to sort temperature/humidity values from the smallest value */
+async function AscendingFilter(date = "") {
   if (option == 0) {
+    if (date === "") {
+      url = "https://localhost:5000/Api/Temperature";
+    } else {
+      url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
+    }
     /* Get temperature data from the backend server */
-    await fetch("https://localhost:5000/Api/Temperature", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -637,8 +705,13 @@ async function AscendingFilter() {
         $(".filter-table").append(htmlString);
       });
   } else {
+    if (date === "") {
+      url = "https://localhost:5000/Api/Humidity";
+    } else {
+      url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
+    }
     /* Get humidity data from the backend server */
-    await fetch("https://localhost:5000/Api/Humidity", {
+    await fetch(url, {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -664,7 +737,7 @@ async function AscendingFilter() {
   }
 }
 
-/* Function to search temperature and humidity values by date */
+/* Function to search temperature/humidity values by date */
 async function SearchByDate(date) {
   let average = 0;
   if (option == 0) {
@@ -852,6 +925,7 @@ async function Login() {
     Unlock();
     $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
+    $(".user-button").fadeIn();
     TimeoutDisplay(0, jwtExpirationTime);
   }
 }
@@ -909,6 +983,7 @@ async function Register() {
     Unlock();
     $(".register-button").text("Refresh");
     $(".login-button").text("Logout");
+    $(".user-button").fadeIn();
     TimeoutDisplay(0, jwtExpirationTime);
   }
 }
@@ -1107,6 +1182,26 @@ async function AlarmHandle(option) {
   }
 }
 
+/* Function to turn on/off the bulb */
+async function BulbHandle(option) {
+  if (option === "OFF") {
+    /* Send command to ESP32 Web Server to turn off the buzzer */
+    await fetch(`http://${esp32IP}/Bulb?Status=OFF`, {
+      mode: "no-cors"
+    });
+  } else if (option === "ON") {
+    /* Send command to ESP32 Web Server to turn on the buzzer */
+    await fetch(`http://${esp32IP}/Bulb?Status=ON`, {
+      mode: "no-cors"
+    });
+  }
+}
+
+/* Function to send backend IP address to esp32 */
+function SendBackendIP(backendIp) {
+  socket.send(`backendIP,${backendIp}:5000`);
+}
+
 /* Function to send/unsend temperature and humidty values from esp32 to webserver */
 async function SendHandle(option) {
   if (option === "Send") {
@@ -1181,9 +1276,21 @@ function WebsocketInit(esp32IP) {
           alarmStatus = "OFF";
           $(".buzzer-state").text("OFF");
         }
+        if (socketData[4] === "1") {
+          bulbStatus = "ON";
+          $(".bulb-state").text("ON");
+        } else if (socketData[4] === "0") {
+          bulbStatus = "OFF";
+          $(".bulb-state").text("OFF");
+        }
       }
     if (socketData[0] === "message") { 
-      alert(socketData[1]);
+      if (socketData[1] === "0") {
+        alert("Failed to send the command. Please try again");
+      }
+      else if (socketData[1] === "1") {
+        alert("The command is sent successfully");  
+      }
     }
     // Handle incoming data from ESP32
   };
@@ -1193,12 +1300,14 @@ function WebsocketInit(esp32IP) {
       console.log("WebSocket connection closed cleanly");
       alert("WebSocket connection closed cleanly");
         $(".ws-connect-button").fadeIn();
-        $(".ws-disconnect-button").hide();
+      $(".ws-disconnect-button").hide();
+      socket.close();  
     } else {
       console.error("WebSocket connection abruptly closed");
       alert("WebSocket connection abruptly closed");
         $(".ws-connect-button").fadeIn();
-        $(".ws-disconnect-button").hide();
+      $(".ws-disconnect-button").hide();
+      socket.close(); 
     }
     RealtimeMode("OFF");
     realtimeTemperature = null;
@@ -1362,7 +1471,7 @@ function humidityClock() {
   }, 10);
 }
 
-/* Timeout display */
+// Timeout display //
 function TimeoutDisplay(option, token) { 
   const time = new Date(token);
   if (option === 0) // jwt token
@@ -1378,6 +1487,7 @@ function TimeoutDisplay(option, token) {
     $(".token-timeout").text(
       `Expiration Time: ${jwtTimeout[3]}/${jwtTimeout[4]}/${jwtTimeout[5]}, ${jwtTimeout[0]}:${jwtTimeout[1]}`
     );
+    return jwtTimeout;
   }
   else if (option === 1) // refresh token 
   {
@@ -1392,5 +1502,38 @@ function TimeoutDisplay(option, token) {
     $(".token-timeout").text(
       `Expiration Time: ${refreshTimeout[3]}/${refreshTimeout[4]}/${refreshTimeout[5]}, ${refreshTimeout[0]}:${refreshTimeout[1]}`
     );
+    return refreshTimeout;
    }
+}
+
+// Function to export table into excel file
+function exportTableToExcel(tableID, filename = "") {
+  var downloadLink;
+  var dataType = "application/vnd.ms-excel";
+  var tableSelect = document.getElementById(tableID);
+  var tableHTML = tableSelect.outerHTML.replace(/ /g, "%20");
+
+  // Specify file name
+  filename = filename ? filename + ".xls" : "excel_data.xls";
+
+  // Create download link element
+  downloadLink = document.createElement("a");
+
+  document.body.appendChild(downloadLink);
+
+  if (navigator.msSaveOrOpenBlob) {
+    var blob = new Blob(["\ufeff", tableHTML], {
+      type: dataType,
+    });
+    navigator.msSaveOrOpenBlob(blob, filename);
+  } else {
+    // Create a link to the file
+    downloadLink.href = "data:" + dataType + ", " + tableHTML;
+
+    // Setting the file name
+    downloadLink.download = filename;
+
+    //triggering the function
+    downloadLink.click();
+  }
 }

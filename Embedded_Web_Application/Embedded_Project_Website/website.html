@@ -28,6 +28,7 @@
 
             <!-- Register/Login Button -->
             <div class="register-login-button">
+                <button class="user-button button-style-3">User</button>
                 <button class="register-button button-style-3">Register</button>
                 <button class="login-button button-style-3">Login</button>
             </div>
@@ -78,8 +79,8 @@
 
                 <select>
                     <option value="">👉 Choose your permission</option>
-                    <option value="User">👀 Read-Only</option>
-                    <option value="Admin">👀+📝 Read-Write</option>
+                    <option value="User">User 👀</option>
+                    <option value="Admin">Admin 👀+📝</option>
                 </select>
             </form>
 
@@ -108,17 +109,13 @@
                 <ion-icon class="shrink-button" name="arrow-back-outline"></ion-icon>
             </div>
             <div class="side-bar-field">
-                <ion-icon name="person-outline"></ion-icon>
-                <p class="user-name"></p>
-            </div>
-            <div class="side-bar-field">
-                <ion-icon name="time-outline"></ion-icon>
-                <p class="token-timeout"></p>
-            </div>
-            <div class="side-bar-field">
                 <ion-icon class="ws-connect-button" name="caret-forward-circle-outline"></ion-icon>
                 <ion-icon class="ws-disconnect-button" name="pause-circle-outline"></ion-icon>
-                <input class="esp32-ip-search" type="text" placeholder="IP Address">
+                <input class="esp32-ip-search" type="text" placeholder="ESP32's IP">
+            </div>
+            <div class="side-bar-field">
+                <ion-icon class="backend-ip-button" name="server-outline"></ion-icon>
+                <input class="backend-ip-search" type="text" placeholder="Backend IP">
             </div>
             <div class="side-bar-field">
                 <ion-icon class="send-button" name="send-outline"></ion-icon>
@@ -130,6 +127,10 @@
                 <p class="buzzer-state">OFF</p>
             </div>
             <div class="side-bar-field">
+                <ion-icon class="bulb-button" name="bulb-outline"></ion-icon>
+                <p class="bulb-state">NA</p>
+            </div>
+            <div class="side-bar-field">
                 <input class="date-search" type="date">
             </div>
             <div class="side-bar-field">
@@ -137,8 +138,8 @@
                 <p class="average-text">Average</p>
             </div>
             <div class="side-bar-field">
-                <ion-icon class="search-button" name="search-outline"></ion-icon>
-                <p>Search</p>
+                <ion-icon class="export-button" name="download-outline"></ion-icon>
+                <p>Export to Excel</p>
             </div>
             <div class="side-bar-field">
                 <ion-icon  class="delete-button" name="trash-outline"></ion-icon>
@@ -209,7 +210,7 @@
             <!-- Filter Section -->
             <div class="filter-table-div">
                 <!-- Filter Table -->
-                <table class="filter-table">
+                <table class="filter-table" id="tblData">
                     <tr>
                         <th>Time</th>
                         <th>Value</th>

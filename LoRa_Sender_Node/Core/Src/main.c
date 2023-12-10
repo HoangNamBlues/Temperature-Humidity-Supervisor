@@ -72,7 +72,9 @@ uint8_t dht22Status = 0;					// variable to check whether the dht22 data is rece
 uint8_t loraStatus = 0;						// variable to check whether the LoRa data is transmitted successfully
 int cmdStatus = 0;							// variable to check whether the command is processed successfully
 int alarmStatus = 0;						// alarm status
+int motorStatus = 0;						// motor status
 int safety = 0;								// safety status
+uint8_t block = 0;							// flag to block sending LoRa data
 
 /* USER CODE END PV */
 
@@ -86,7 +88,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 void Data_Packet_Encapsulation(char* buffer, int src_id, int des_id, int sendingType, double temp, double humid, int safety);
-void Status_Packet_Encapsulation(char* buffer, int src_id, int des_id, int sendingType, int cmd_status, int alarm_status);
+void Status_Packet_Encapsulation(char* buffer, int src_id, int des_id, int sendingType, int cmd_status, int alarm_status, int motor_status);
 void Lcd_Sytem_State_Print(uint8_t mode);
 void Long_Pressed_Button(void);
 int Alarm_Check(double temp, double humid);
@@ -190,9 +192,14 @@ int main(void)
 	}
 	LoRa_startReceiving(&myLoRa); // Start LoRa receive mode
 
+	/* LoRa status encapsulation */
+	Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, motorStatus);
+
+	/* LoRa sending */
+	LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+
 	// Turn off the alarm mode
 	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-
 
 	//SCB->SCR |= ( 1 << 1);
 		HAL_PWR_EnableSleepOnExit();
@@ -485,6 +492,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, DHT22_Pin|BUZZER_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, RST_Pin|NSS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : LED_Pin */
@@ -494,8 +504,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BUZZER_BUTTON_Pin INC_BUTTON_Pin DES_BUTTON_Pin MODE_BUTTON_Pin */
-  GPIO_InitStruct.Pin = BUZZER_BUTTON_Pin|INC_BUTTON_Pin|DES_BUTTON_Pin|MODE_BUTTON_Pin;
+  /*Configure GPIO pins : BUZZER_BUTTON_Pin INC_BUTTON_Pin DES_BUTTON_Pin RELAY_BUTTON_Pin
+                           MODE_BUTTON_Pin */
+  GPIO_InitStruct.Pin = BUZZER_BUTTON_Pin|INC_BUTTON_Pin|DES_BUTTON_Pin|RELAY_BUTTON_Pin
+                          |MODE_BUTTON_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -507,18 +519,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : RELAY_Pin RST_Pin NSS_Pin */
+  GPIO_InitStruct.Pin = RELAY_Pin|RST_Pin|NSS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pin : DIO0_Pin */
   GPIO_InitStruct.Pin = DIO0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : RST_Pin NSS_Pin */
-  GPIO_InitStruct.Pin = RST_Pin|NSS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
@@ -529,6 +541,9 @@ static void MX_GPIO_Init(void)
 
   HAL_NVIC_SetPriority(EXTI3_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 7, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
@@ -601,6 +616,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 		// BUZZER_BUTTON pressed
 		case BUZZER_BUTTON_Pin:
+			// Stop timer 4
+			HAL_TIM_Base_Stop_IT(&htim4);
 			Buzzer_Trigger();
 			// Toggle the built-in LED, changing the alarm status
 			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
@@ -615,6 +632,46 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			{
 				alarmStatus = 1;
 			}
+
+			/* LoRa status encapsulation */
+			Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, motorStatus);
+			block = 1;
+			Delay_Ms(100);
+
+			/* LoRa sending data */
+			LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+			block = 0;
+			// Start timer 4 again
+			HAL_TIM_Base_Start_IT(&htim4);
+			break;
+
+			// RELAY_BUTTON pressed
+			case RELAY_BUTTON_Pin:
+			// Stop timer 4
+			HAL_TIM_Base_Stop_IT(&htim4);
+			Buzzer_Trigger();
+			// Check if the motor is turned OFF
+			if(motorStatus == 0)
+			{
+				HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_SET);
+				motorStatus = 1;
+			}
+			else
+			{
+				HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_RESET);
+				motorStatus = 0;
+			}
+
+			/* LoRa status encapsulation */
+			Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, motorStatus);
+			block = 1;
+			Delay_Ms(100);
+
+			/* LoRa sending data */
+			LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+			block = 0;
+			// Start timer 4 again
+			HAL_TIM_Base_Start_IT(&htim4);
 			break;
 
 		// INC_BUTTON pressed
@@ -687,9 +744,9 @@ void Data_Packet_Encapsulation(char* buffer ,int src_id, int des_id, int sending
 }
 
 // Encapsulate the status into a packet containing the string: "source_id,destination_id, sendingType, cmd_status, alarm_status"
-void Status_Packet_Encapsulation(char* buffer ,int src_id, int des_id, int sendingType, int cmd_status, int alarm_status)
+void Status_Packet_Encapsulation(char* buffer ,int src_id, int des_id, int sendingType, int cmd_status, int alarm_status, int motor_status)
 {
-	sprintf(buffer, "%d,%d,%d,%d,%d", src_id, des_id, sendingType, cmd_status, alarm_status);
+	sprintf(buffer, "%d,%d,%d,%d,%d,%d", src_id, des_id, sendingType, cmd_status, alarm_status, motor_status);
 }
 
 // System state LCD print
@@ -995,6 +1052,8 @@ int Alarm_Check(double temp, double humid)
 // LoRa receive data handle
 void LoRa_Receive_Handle()
 {
+	// Stop timer 4
+	HAL_TIM_Base_Stop_IT(&htim4);
 	char *rcvSrcId;		// pointer to source ID
 	char *rcvDesId;		// pointer to destination ID
 	char *cmdType;			// pointer to received message
@@ -1049,18 +1108,34 @@ void LoRa_Receive_Handle()
 			humid_setpoint[1] = d;
 			cmdStatus = 1;
 		}
-
-		// Stop timer 4
-		HAL_TIM_Base_Stop_IT(&htim4);
+		else if (!strcmp(cmdType,"4"))
+		{
+			char *status; // pointer to the received motor status
+			status = strtok(NULL, ","); // continue to return the pointer to the received buzzer status
+			if (!strcmp(status, "ON"))
+			{
+				HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_SET);
+				cmdStatus = 1;
+				motorStatus = 1;
+			}
+			else if (!strcmp(status, "OFF"))
+			{
+				HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_RESET);
+				cmdStatus = 1;
+				motorStatus = 0;
+			}
+		}
 
 		/* LoRa status encapsulation */
-		Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, cmdStatus, alarmStatus);
-		Delay_Ms(200);
+		Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, cmdStatus, alarmStatus, motorStatus);
+		block = 1;
+		Delay_Ms(100);
 
 		/* LoRa sending data */
 		LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
 
 		cmdStatus = 0;
+		block = 0;
 
 		// Start timer 4 again
 		HAL_TIM_Base_Start_IT(&htim4);
@@ -1082,8 +1157,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			/* LoRa data encapsulation */
 			Data_Packet_Encapsulation(lora_buffer, 10, 20, 0, dht22Data.temperature, dht22Data.humidity, safety);
 
-			/* LoRa sending data */
-			LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+			if (block == 0)
+			{
+				/* LoRa sending data */
+				LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 100);
+			}
 		}
 
 		if (safety == 0)

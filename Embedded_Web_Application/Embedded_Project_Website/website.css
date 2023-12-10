@@ -251,6 +251,15 @@ form select:hover {
   font-size: 18px;
   box-shadow: 2px 2px 2px rgb(0, 0, 0);
 }
+.backend-ip-search {
+  height: 40px;
+  width: 120px;
+  margin-left: 10px;
+  border-radius: 10px;
+  padding-left: 10px;
+  font-size: 18px;
+  box-shadow: 2px 2px 2px rgb(0, 0, 0);
+}
 
 /* Edit temperature supervisor */
 .temperature-humidity-table {

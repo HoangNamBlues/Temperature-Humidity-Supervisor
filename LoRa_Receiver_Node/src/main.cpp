@@ -55,17 +55,19 @@ unsigned long lastTimeDelay = 0;
 unsigned long lastSendTime = 0;
 unsigned long lastReceiveTime = 0;
 unsigned long lastWsTime = 0;
+unsigned long lastCheck = 0;
 String backendIP = "192.168.1.6:5000";                       // Backend IP address and its port
 String jwtToken = "";                                        // JWT token variable
 DHT22Data data = {0, 0, false};                              // DHT22 received data
 ConnectButton wifiButton = {false, false, false, 22};        // button to connect/disconnect wifi
 ConnectButton loraButton = {false, false, false, 32};        // button to connect/disconnect lora
-bool wifiResetFlag = false;                                  // flag to check whether the wifi reset button was pressed
+bool wifiResetFlag = false;                                  // flag to check whether the wifi reset button was pressed     
 bool sendingFlag = false;                                    // flag to check the sending/unsending data to web api command from website
 bool sendingStatus[2] = {false, false};                      // flag to check the status of sending data to web api
 bool loginFlag = false;                                      // flag to identify whether you have logan or not
 AsyncWebServer server(80);                                   // ESP32 server listening on port 80
 AsyncWebSocket ws("/ws");                                    // ESP32 websocket handle
+HTTPClient http;
 bool webserverButton = false;                                // flag to check whether webserverButton was pressed
 bool websocketFlag = false;                                  // flag to check whether esp32 was set as websocket
 bool websocketConnected = false;                             // flag to check whether websocket connection was established
@@ -76,8 +78,9 @@ const char *sourceId = "20";                                 // define the LoRa 
 const char *seperateCharacter = ",";                         // define the seperate character in the string of LoRa data
 uint8_t cmdFlag = 0;                                         // 1: STM32F1 processed a command successfully, 2: STM32F1 failed to process a command
 bool alarm_status = 0;                                       // 0: Alarm mode is OFF, 1: Alarm mode is ON
+bool bulb_status = 0;                                        // 0: Bulb is OFF, 1: Bulb is ON
 bool safeFlag = 0;                                           // 0: the temperature/humdity range is in safe range, 1: the temperature/humidity is in dangerous range
-bool postFlag = false;                                        // Flag for checking the POST process
+bool postFlag = false;                                       // Flag for checking the POST process
 
 /* Function Prototype */
 // LED
@@ -114,6 +117,8 @@ void WebapiStatusDisplay();                  // Web API status Oled display
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void initWebSocket();
+// Other functions
+String convertToString(char *a, int size);  // Function to convert char array to string
 
 /******************************************************************** SETUP ************************************************************************************/
 void setup()
@@ -169,7 +174,6 @@ void setup()
 /******************************************************************** LOOP *************************************************************************************/
 void loop()
 {
-  ws.cleanupClients();
   // Check whether user has pressed the wifi reset button
   if (wifiResetFlag == true)
   {
@@ -188,7 +192,7 @@ void loop()
   {
     LoRaHandle();
   }
-  // Check whether user has pressed the server  button 
+  // Check whether user has pressed the server button 
   if (webserverButton == true)
   {
     if (websocketFlag == true)
@@ -201,10 +205,11 @@ void loop()
     else
     {
       ws.closeAll();
+      ws.cleanupClients();
     }
     webserverButton = false;
   }
-  if (millis() - lastReceiveTime > 100)
+  if (millis() - lastReceiveTime > 20)
   {
     // Receive data from stm32f1 over LoRa
     if (loraButton.connect)
@@ -213,34 +218,21 @@ void loop()
     }
     OledDisplay(data.temp, data.humid); // display data on OLED
   }
-  // Check if esp32 has received LoRa data
-  if (data.received == true)
+  // Check if the temperature/humidity is in dangerous range
+  if (millis() - lastCheck > 200)
   {
-    // Check if the temperature/humidity is in dangerous range
     if (safeFlag == 1)
     {
       BuzzerTrigger();
     }
-    
+    lastCheck = millis();
+  }
+  // Check if esp32 has received LoRa data
+  if (data.received == true)
+  { 
     // Check for WiFi connection
     if (wifiButton.connect == true)
     {
-      if (cmdFlag == 1)
-      {
-        ws.textAll("message,The command is sent successfully");
-        if(postFlag == false)
-        {
-          cmdFlag = 0;
-        }
-      }
-      else if (cmdFlag == 2)
-      {
-        ws.textAll("message,Failed to send the command. Please try again!");
-        if (postFlag == false)
-        {
-          cmdFlag = 0;
-        }
-      }
       // POST data to webserver
         if (sendingFlag == true)
         {
@@ -268,10 +260,38 @@ void loop()
       // PUSH data to the website directly
       if (realtimeFlag == true)
       {
-        if (millis() - lastWsTime > 10)
+        if (millis() - lastWsTime > 50)
         {
-          String message = "data," + String(data.temp) + "," + String(data.humid) + "," + String(alarm_status);
+          // Check whether the command was processed
+          if (cmdFlag == 1)
+          {
+            http.end();
+            Delayms(20);
+            ws.textAll("message,1");
+            // if (postFlag == false)
+            // {
+            //   cmdFlag = 0;
+            // }
+            cmdFlag = 0;
+          }
+          else if (cmdFlag == 2)
+          {
+            http.end();
+            Delayms(20);
+            ws.textAll("message,0");
+            // if (postFlag == false)
+            // {
+            //   cmdFlag = 0;
+            // }
+            cmdFlag = 0;
+          }
+          String message = "data," + String(data.temp) + "," + String(data.humid) + "," + String(alarm_status) + "," + String(bulb_status);
+          http.end();
           ws.textAll(message);
+          // if (postFlag == false)
+          // {
+          //   data.received = false;
+          // }
           data.received = false;
           lastWsTime = millis();
         }
@@ -335,7 +355,7 @@ bool PostTemperature(double temp)
   Serial.println(postTemperatureUrl);
 
   /* Begin to send POST request to the server */
-  HTTPClient http;
+  // HTTPClient http;
   postFlag = true;
   http.begin(postTemperatureUrl);
   int responseCode = http.POST("");
@@ -370,7 +390,7 @@ bool PostHumidity(double humid)
   Serial.println(postHumidityUrl);
 
   /* Begin to send POST request to the server */
-  HTTPClient http;
+  // HTTPClient http;
   postFlag = true;
   http.begin(postHumidityUrl);
   int responseCode = http.POST("");
@@ -707,7 +727,7 @@ void WebapiStatusDisplay()
   {
     display.println("Websocket: Closed");
   }
-  if (sendingFlag == true)
+  if (sendingStatus[0] == true && sendingStatus[1] == true && sendingFlag == true)
   {
     display.println("Sending to Webapi");
   }
@@ -747,6 +767,7 @@ void LoRaReceive()
   char *safety;                       // pointer to the safety check
   char *cmdStatus;                    // pointer to command status
   char *alarmStatus;                  // pointer to alarm status
+  char *bulbStatus;                   // pointer to bulb status
   char rcvData[50];                   // array containing String of LoRa data
   char buffer[50];                    // array containing seperate components in array of LoRa data
   int packetSize = LoRa.parsePacket();// LoRa data packet size received from LoRa sender
@@ -809,6 +830,7 @@ void LoRaReceive()
             {
               cmdStatus = strtok(NULL, ",");   // continue to return the pointer to the command status
               alarmStatus = strtok(NULL, ","); // continue to return the pointer to the alarm status
+              bulbStatus = strtok(NULL, ","); // continue to return the pointer to the alarm status
               if(cmdStatus != NULL && alarmStatus != NULL)
               {
                 // Check the command status
@@ -831,6 +853,23 @@ void LoRaReceive()
                 {
                   alarm_status = 0;
                 }
+                // Check the bulb status
+                if (!strcmp(bulbStatus, "1"))
+                {
+                  bulb_status = 1;
+                }
+                else if (!strcmp(bulbStatus, "0"))
+                {
+                  bulb_status = 0;
+                }
+                
+                // Successful data reception
+                data.received = true;
+              }
+              else
+              {
+                // Failed to receive data reception
+                data.received = false;
               }
             }
           }
@@ -903,6 +942,35 @@ void LoRaReceive()
       }
       request->send(200, "text/plain", "Buzzer status command: " + message); }
     );
+
+    // Send a GET request to turn on/off the bulb
+    server.on("/Bulb", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+      String message;
+      if (request->hasParam("Status"))
+      {
+        message = request->getParam("Status")->value();
+        if (message == "ON")
+        {
+          LoRaSend("10", "4,ON");
+          Delayms(10);
+        }
+        else if (message == "OFF") 
+        {
+          LoRaSend("10", "4,OFF");
+          Delayms(10);
+        }
+        else
+        {
+          request->send(400, "text/plain", "Bad request");
+        }
+      }
+      else
+      {
+        message = "No message sent";
+      }
+      request->send(200, "text/plain", "Bulb status command: " + message); 
+    });
 
     // Send a GET request to start sending data to asp.net webserver
     server.on("/Start", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -1011,20 +1079,32 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
 data[len] = 0;
-// if (strcmp((char *)data, "Start") == 0)
-// {
-//   BuzzerTrigger();
-//   sendingFlag = true;
-//   loginFlag = true;
-//   notifyClients();
-// }
-// else if (strcmp((char *)data, "Stop") == 0)
-// {
-//   BuzzerTrigger();
-//   sendingFlag = false;
-//   loginFlag = false;
-//   notifyClients();
-// }
+char *indicator;
+char *main;
+indicator = strtok((char*)data, ","); // return the pointer to the indicator part
+main = strtok(NULL, ",");    // continue to return the pointer to main part
+if(indicator != NULL && main != NULL)\
+{
+  if (!strcmp(indicator, "backendIP"))
+  {
+    backendIP = convertToString(main, strlen(main));
+    BuzzerTrigger();
+  }
+  // else if (!strcmp(indicator, "Alarm"))
+  // {
+  //   if (!strcmp(main, "ON"))
+  //   {
+  //     LoRaSend("10", "1,ON");
+  //     Delayms(10);
+  //   }
+  //   else if (!strcmp(main, "OFF"))
+  //   {
+  //     LoRaSend("10", "1,OFF");
+  //     Delayms(10);
+  //   }
+    
+  // }
+}
   }
 }
 
@@ -1053,6 +1133,18 @@ void initWebSocket()
 {
   ws.onEvent(onEvent);
   server.addHandler(&ws);
+}
+
+/* Function to convert char array to string */
+String convertToString(char *a, int size)
+{
+  int i;
+  String s = "";
+  for (i = 0; i < size; i++)
+  {
+    s = s + a[i];
+  }
+  return s;
 }
 
 /* Server listening handler */
