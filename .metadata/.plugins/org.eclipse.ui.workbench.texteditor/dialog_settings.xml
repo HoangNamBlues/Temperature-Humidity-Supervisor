@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
-		<item key="selection" value=""/>
+		<item key="selection" value="Reset"/>
 		<item key="wrap" value="true"/>
 		<item key="casesensitive" value="false"/>
 		<item key="wholeword" value="false"/>
 		<item key="incremental" value="false"/>
 		<item key="isRegEx" value="false"/>
 		<list key="findhistory">
+			<item value="reset"/>
+			<item value="restart"/>
+			<item value="motorStatus"/>
+			<item value="tim2"/>
+			<item value="tim1"/>
+			<item value="imt1"/>
+			<item value="alarm_status"/>
+			<item value="motor_status"/>
 			<item value="LoRa_receive_IT"/>
 			<item value="Status_Packet_Encapsulation"/>
 			<item value="sendingType"/>
@@ -15,16 +23,10 @@
 			<item value="safety"/>
 			<item value="safetyStatus"/>
 			<item value="safety_status"/>
-			<item value="lora_data"/>
-			<item value="cmdStatus"/>
-			<item value="Alarm_Check"/>
-			<item value="Packet_Encapsulation"/>
-			<item value="loraStatus"/>
-			<item value="LED_GPIO_Port"/>
-			<item value="GPIO_PIN_13"/>
-			<item value="sscanf"/>
 		</list>
 		<list key="replacehistory">
+			<item value="bulbStatus"/>
+			<item value="bulb_status"/>
 			<item value="safety"/>
 			<item value="lora_buffer"/>
 		</list>

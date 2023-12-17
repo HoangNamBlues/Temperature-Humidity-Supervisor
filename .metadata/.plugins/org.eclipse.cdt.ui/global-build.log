@@ -1,14 +1,9 @@
-15:53:30 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+12:17:45 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
 make -j20 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
-arm-none-eabi-gcc "../Core/Src/stm32f1xx_hal_msp.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f1xx_hal_msp.d" -MT"Core/Src/stm32f1xx_hal_msp.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/stm32f1xx_hal_msp.o"
-arm-none-eabi-gcc "../Core/Src/stm32f1xx_it.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f1xx_it.d" -MT"Core/Src/stm32f1xx_it.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/stm32f1xx_it.o"
-arm-none-eabi-gcc "../Board-Support-Packet/Src/DHT22.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Board-Support-Packet/Src/DHT22.d" -MT"Board-Support-Packet/Src/DHT22.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Board-Support-Packet/Src/DHT22.o"
-arm-none-eabi-gcc "../Board-Support-Packet/Src/LCD_I2C.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Board-Support-Packet/Src/LCD_I2C.d" -MT"Board-Support-Packet/Src/LCD_I2C.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Board-Support-Packet/Src/LCD_I2C.o"
-arm-none-eabi-gcc "../Board-Support-Packet/Src/LoRa.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Board-Support-Packet/Src/LoRa.d" -MT"Board-Support-Packet/Src/LoRa.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Board-Support-Packet/Src/LoRa.o"
 ../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1049:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1049 |         char *rcvSrcId;         // pointer to source ID
+../Core/Src/main.c:1070:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
+ 1070 |         char *rcvSrcId;         // pointer to source ID
       |               ^~~~~~~~
 arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: LoRa_Sender_Node.elf
@@ -16,24 +11,17 @@ Finished building target: LoRa_Sender_Node.elf
 arm-none-eabi-size   LoRa_Sender_Node.elf 
 arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
    text	   data	    bss	    dec	    hex	filename
-  46836	    516	   2520	  49872	   c2d0	LoRa_Sender_Node.elf
+  47812	    516	   2552	  50880	   c6c0	LoRa_Sender_Node.elf
 Finished building: default.size.stdout
  
 Finished building: LoRa_Sender_Node.list
  
-15:54:49 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-size   LoRa_Sender_Node.elf 
-   text	   data	    bss	    dec	    hex	filename
-  46836	    516	   2520	  49872	   c2d0	LoRa_Sender_Node.elf
-Finished building: default.size.stdout
- 
-16:02:01 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+12:17:47 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
 make -j20 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
 ../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1056:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1056 |         char *rcvSrcId;         // pointer to source ID
+../Core/Src/main.c:1070:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
+ 1070 |         char *rcvSrcId;         // pointer to source ID
       |               ^~~~~~~~
 arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: LoRa_Sender_Node.elf
@@ -41,129 +29,15 @@ Finished building target: LoRa_Sender_Node.elf
 arm-none-eabi-size   LoRa_Sender_Node.elf 
 arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
    text	   data	    bss	    dec	    hex	filename
-  46900	    516	   2520	  49936	   c310	LoRa_Sender_Node.elf
+  47812	    516	   2552	  50880	   c6c0	LoRa_Sender_Node.elf
 Finished building: default.size.stdout
  
 Finished building: LoRa_Sender_Node.list
  
-16:23:21 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+12:20:42 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
 make -j20 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
-../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1064:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1064 |         char *rcvSrcId;         // pointer to source ID
-      |               ^~~~~~~~
-arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: LoRa_Sender_Node.elf
- 
 arm-none-eabi-size   LoRa_Sender_Node.elf 
-arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
    text	   data	    bss	    dec	    hex	filename
-  46924	    516	   2520	  49960	   c328	LoRa_Sender_Node.elf
+  47812	    516	   2552	  50880	   c6c0	LoRa_Sender_Node.elf
 Finished building: default.size.stdout
- 
-Finished building: LoRa_Sender_Node.list
- 
-16:24:38 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
-../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1065:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1065 |         char *rcvSrcId;         // pointer to source ID
-      |               ^~~~~~~~
-arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: LoRa_Sender_Node.elf
- 
-arm-none-eabi-size   LoRa_Sender_Node.elf 
-arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
-   text	   data	    bss	    dec	    hex	filename
-  46924	    516	   2520	  49960	   c328	LoRa_Sender_Node.elf
-Finished building: default.size.stdout
- 
-Finished building: LoRa_Sender_Node.list
- 
-16:25:35 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
-../Core/Src/main.c: In function 'HAL_GPIO_EXTI_Callback':
-../Core/Src/main.c:636:38: error: unknown type name '_'
-  636 |                         Delay_Ms(50);_
-      |                                      ^
-../Core/Src/main.c:638:65: error: expected ')' before numeric constant
-  638 |                         Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, motorStatus);
-      |                                                                 ^~~
-      |                                                                 )
-../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1066:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1066 |         char *rcvSrcId;         // pointer to source ID
-      |               ^~~~~~~~
-make: *** [Core/Src/subdir.mk:34: Core/Src/main.o] Error 1
-"make -j20 all" terminated with exit code 2. Build might be incomplete.
-16:25:44 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
-../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1066:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1066 |         char *rcvSrcId;         // pointer to source ID
-      |               ^~~~~~~~
-arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: LoRa_Sender_Node.elf
- 
-arm-none-eabi-size   LoRa_Sender_Node.elf 
-arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
-   text	   data	    bss	    dec	    hex	filename
-  46932	    516	   2520	  49968	   c330	LoRa_Sender_Node.elf
-Finished building: default.size.stdout
- 
-Finished building: LoRa_Sender_Node.list
- 
-16:26:29 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
-../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1065:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1065 |         char *rcvSrcId;         // pointer to source ID
-      |               ^~~~~~~~
-arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: LoRa_Sender_Node.elf
- 
-arm-none-eabi-size   LoRa_Sender_Node.elf 
-arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
-   text	   data	    bss	    dec	    hex	filename
-  46924	    516	   2520	  49960	   c328	LoRa_Sender_Node.elf
-Finished building: default.size.stdout
- 
-Finished building: LoRa_Sender_Node.list
- 
-16:28:48 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
-../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1057:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1057 |         char *rcvSrcId;         // pointer to source ID
-      |               ^~~~~~~~
-arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: LoRa_Sender_Node.elf
- 
-arm-none-eabi-size   LoRa_Sender_Node.elf 
-arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
-   text	   data	    bss	    dec	    hex	filename
-  46900	    516	   2520	  49936	   c310	LoRa_Sender_Node.elf
-Finished building: default.size.stdout
- 
-Finished building: LoRa_Sender_Node.list
- 
-17:11:41 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-gcc "../Core/Src/stm32f1xx_it.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f1xx_it.d" -MT"Core/Src/stm32f1xx_it.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/stm32f1xx_it.o"
-arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: LoRa_Sender_Node.elf
- 
-arm-none-eabi-size   LoRa_Sender_Node.elf 
-arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
-   text	   data	    bss	    dec	    hex	filename
-  46908	    516	   2520	  49944	   c318	LoRa_Sender_Node.elf
-Finished building: default.size.stdout
- 
-Finished building: LoRa_Sender_Node.list
  
