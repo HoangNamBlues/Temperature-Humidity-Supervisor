@@ -53,7 +53,7 @@ I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi2;
 
-TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
@@ -82,10 +82,10 @@ uint8_t block = 0;							// flag to block sending LoRa data
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI2_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 void Data_Packet_Encapsulation(char* buffer, int src_id, int des_id, int sendingType, double temp, double humid, int safety);
 void Status_Packet_Encapsulation(char* buffer, int src_id, int des_id, int sendingType, int cmd_status, int alarm_status, int bulb_status);
@@ -129,13 +129,13 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI2_Init();
-  MX_TIM2_Init();
   MX_TIM3_Init();
   MX_I2C1_Init();
   MX_TIM4_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	// Initialize Timer 2 / Timer 3
-	HAL_TIM_Base_Start(&htim2);
+	HAL_TIM_Base_Start(&htim1);
 	HAL_TIM_Base_Start(&htim3);
 
 	// Initialize DHT22
@@ -334,47 +334,48 @@ static void MX_SPI2_Init(void)
 }
 
 /**
-  * @brief TIM2 Initialization Function
+  * @brief TIM1 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_TIM2_Init(void)
+static void MX_TIM1_Init(void)
 {
 
-  /* USER CODE BEGIN TIM2_Init 0 */
+  /* USER CODE BEGIN TIM1_Init 0 */
 
-  /* USER CODE END TIM2_Init 0 */
+  /* USER CODE END TIM1_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE BEGIN TIM2_Init 1 */
+  /* USER CODE BEGIN TIM1_Init 1 */
 
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 71;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 65535;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 71;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM2_Init 2 */
+  /* USER CODE BEGIN TIM1_Init 2 */
 
-  /* USER CODE END TIM2_Init 2 */
+  /* USER CODE END TIM1_Init 2 */
 
 }
 
@@ -504,9 +505,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BUZZER_BUTTON_Pin INC_BUTTON_Pin DES_BUTTON_Pin RELAY_BUTTON_Pin */
-  GPIO_InitStruct.Pin = BUZZER_BUTTON_Pin|INC_BUTTON_Pin|DES_BUTTON_Pin|RELAY_BUTTON_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pins : BUZZER_BUTTON_Pin INC_BUTTON_Pin DES_BUTTON_Pin RELAY_BUTTON_Pin
+                           MODE_BUTTON_Pin */
+  GPIO_InitStruct.Pin = BUZZER_BUTTON_Pin|INC_BUTTON_Pin|DES_BUTTON_Pin|RELAY_BUTTON_Pin
+                          |MODE_BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -529,12 +532,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : MODE_BUTTON_Pin */
-  GPIO_InitStruct.Pin = MODE_BUTTON_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(MODE_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI1_IRQn, 7, 0);
@@ -564,8 +561,8 @@ static void MX_GPIO_Init(void)
 // Delay micro-second function
 void Delay_Us(uint32_t us)
 {
-	__HAL_TIM_SET_COUNTER(&htim2, 0); // set counter value to 0
-	while (__HAL_TIM_GET_COUNTER(&htim2) < us)
+	__HAL_TIM_SET_COUNTER(&htim1, 0); // set counter value to 0
+	while (__HAL_TIM_GET_COUNTER(&htim1) < us)
 		; // wait for the counter to reach the us input in the parameter
 }
 
@@ -588,155 +585,169 @@ void Buzzer_Trigger(void) {
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	switch (GPIO_Pin) {
-		// MODE_BUTTON pressed
-		case MODE_BUTTON_Pin:
-			Buzzer_Trigger();
-			if(mode == NORMAL)
-			{
-				lcd_clear();
-				mode = TEMPERATURE_SETPOINT_LOW;
-			}
-			else if(mode == TEMPERATURE_SETPOINT_LOW)
-			{
-				lcd_clear();
-				mode = TEMPERATURE_SETPOINT_HIGH;
-			}
-			else if(mode == TEMPERATURE_SETPOINT_HIGH)
-			{
-				lcd_clear();
-				mode = HUMIDITY_SETPOINT_LOW;
-			}
-			else if(mode == HUMIDITY_SETPOINT_LOW)
-			{
-				lcd_clear();
-				mode = HUMIDITY_SETPOINT_HIGH;
-			}
-			else
-			{
-				lcd_clear();
-				mode = NORMAL;
-			}
-			break;
+			// MODE_BUTTON pressed
+			case MODE_BUTTON_Pin:
+				if(HAL_GPIO_ReadPin(MODE_BUTTON_GPIO_Port, MODE_BUTTON_Pin) == 0)
+				{
+					Buzzer_Trigger();
+					if(mode == NORMAL)
+					{
+						lcd_clear();
+						mode = TEMPERATURE_SETPOINT_LOW;
+					}
+					else if(mode == TEMPERATURE_SETPOINT_LOW)
+					{
+						lcd_clear();
+						mode = TEMPERATURE_SETPOINT_HIGH;
+					}
+					else if(mode == TEMPERATURE_SETPOINT_HIGH)
+					{
+						lcd_clear();
+						mode = HUMIDITY_SETPOINT_LOW;
+					}
+					else if(mode == HUMIDITY_SETPOINT_LOW)
+					{
+						lcd_clear();
+						mode = HUMIDITY_SETPOINT_HIGH;
+					}
+					else
+					{
+						lcd_clear();
+						mode = NORMAL;
+					}
+				}
+				break;
 
-		// BUZZER_BUTTON pressed
-		case BUZZER_BUTTON_Pin:
-			// Stop timer 4
-			HAL_TIM_Base_Stop_IT(&htim4);
-			Buzzer_Trigger();
-			// Toggle the built-in LED, changing the alarm status
-			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-			// Check if the alarm is turned OFF
-			if(HAL_GPIO_ReadPin(LED_GPIO_Port, LED_Pin))
-			{
-				alarmStatus = 0;
-			}
-			else
-			{
-				alarmStatus = 1;
-			}
+			// BUZZER_BUTTON pressed
+			case BUZZER_BUTTON_Pin:
+				if(HAL_GPIO_ReadPin(BUZZER_BUTTON_GPIO_Port, BUZZER_BUTTON_Pin) == 0)
+				{
+					// Stop timer 4
+					HAL_TIM_Base_Stop_IT(&htim4);
+					Buzzer_Trigger();
+					// Toggle the built-in LED, changing the alarm status
+					HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+					// Check if the alarm is turned OFF
+					if(HAL_GPIO_ReadPin(LED_GPIO_Port, LED_Pin))
+					{
+						alarmStatus = 0;
+					}
+					else
+					{
+						alarmStatus = 1;
+					}
 
-			/* LoRa status encapsulation */
-			Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
-			block = 1;
-			Delay_Ms(100);
+					/* LoRa status encapsulation */
+					Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
+					block = 1;
+					Delay_Ms(100);
+					/* LoRa sending data */
+					LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+					block = 0;
+					// Start timer 4 again
+					HAL_TIM_Base_Start_IT(&htim4);
+				}
+				break;
 
-			/* LoRa sending data */
-			LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
-			block = 0;
-			// Start timer 4 again
-			HAL_TIM_Base_Start_IT(&htim4);
-			break;
-
-			// RELAY_BUTTON pressed
+				// RELAY_BUTTON pressed
 			case RELAY_BUTTON_Pin:
-			// Stop timer 4
-			HAL_TIM_Base_Stop_IT(&htim4);
-			Buzzer_Trigger();
-			// Check if the motor is turned OFF
-			if(bulbStatus == 0)
-			{
-				HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_SET);
-				bulbStatus = 1;
-			}
-			else
-			{
-				HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_RESET);
-				bulbStatus = 0;
-			}
+				// Toggle the bulb status
+				if(HAL_GPIO_ReadPin(RELAY_BUTTON_GPIO_Port, RELAY_BUTTON_Pin) == 0)
+				{
+					// Stop timer 4
+					HAL_TIM_Base_Stop_IT(&htim4);
+					Buzzer_Trigger();
+					HAL_GPIO_TogglePin(RELAY_GPIO_Port, RELAY_Pin);
+					// Check if the bulb status
+					if(HAL_GPIO_ReadPin(RELAY_GPIO_Port, RELAY_Pin))
+					{
+						bulbStatus = 1;
+					}
+					else
+					{
+						bulbStatus = 0;
+					}
 
-			/* LoRa status encapsulation */
-			Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
-			block = 1;
-			Delay_Ms(100);
+					/* LoRa status encapsulation */
+					Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
+					block = 1;
+					Delay_Ms(100);
 
-			/* LoRa sending data */
-			LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
-			block = 0;
-			// Start timer 4 again
-			HAL_TIM_Base_Start_IT(&htim4);
-			break;
+					/* LoRa sending data */
+					LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+					block = 0;
+					// Start timer 4 again
+					HAL_TIM_Base_Start_IT(&htim4);
+				}
+				break;
 
-		// INC_BUTTON pressed
-		case INC_BUTTON_Pin:
-			Buzzer_Trigger();
-			if(mode == TEMPERATURE_SETPOINT_LOW)
-			{
-				temp_setpoint[0] = temp_setpoint[0] + 0.1;
-			}
-			else if(mode == TEMPERATURE_SETPOINT_HIGH)
-			{
-				temp_setpoint[1] = temp_setpoint[1] + 0.1;
-			}
-			else if(mode == HUMIDITY_SETPOINT_LOW)
-			{
-				humid_setpoint[0] = humid_setpoint[0] + 0.1;
-			}
-			else if(mode == HUMIDITY_SETPOINT_HIGH)
-			{
-				humid_setpoint[1] = humid_setpoint[1] + 0.1;
-			}
-			else
-			{
+			// INC_BUTTON pressed
+			case INC_BUTTON_Pin:
+				if(HAL_GPIO_ReadPin(INC_BUTTON_GPIO_Port, INC_BUTTON_Pin) == 0)
+				{
+					Buzzer_Trigger();
+					if(mode == TEMPERATURE_SETPOINT_LOW)
+					{
+						temp_setpoint[0] = temp_setpoint[0] + 0.1;
+					}
+					else if(mode == TEMPERATURE_SETPOINT_HIGH)
+					{
+						temp_setpoint[1] = temp_setpoint[1] + 0.1;
+					}
+					else if(mode == HUMIDITY_SETPOINT_LOW)
+					{
+						humid_setpoint[0] = humid_setpoint[0] + 0.1;
+					}
+					else if(mode == HUMIDITY_SETPOINT_HIGH)
+					{
+						humid_setpoint[1] = humid_setpoint[1] + 0.1;
+					}
+					else
+					{
+						mode = NORMAL;
+					}
+				}
+				break;
+
+			// DES_BUTTON pressed
+			case DES_BUTTON_Pin:
+				if(HAL_GPIO_ReadPin(DES_BUTTON_GPIO_Port, DES_BUTTON_Pin) == 0)
+				{
+					Buzzer_Trigger();
+					if(mode == TEMPERATURE_SETPOINT_LOW)
+					{
+						temp_setpoint[0] = temp_setpoint[0] - 0.1;
+					}
+					else if(mode == TEMPERATURE_SETPOINT_HIGH)
+					{
+						temp_setpoint[1] = temp_setpoint[1] - 0.1;
+					}
+					else if(mode == HUMIDITY_SETPOINT_LOW)
+					{
+						humid_setpoint[0] = humid_setpoint[0] - 0.1;
+					}
+					else if(mode == HUMIDITY_SETPOINT_HIGH)
+					{
+						humid_setpoint[1] = humid_setpoint[1] - 0.1;
+					}
+					else
+					{
+						mode = NORMAL;
+					}
+				}
+				break;
+
+			case DIO0_Pin:
+				/* LoRa receiving */
+				LoRa_receive(&myLoRa, (uint8_t*) received_data, 20);
+				LoRa_Receive_Handle();
+				break;
+
+			// Something went wrong, turn back to NORMAL MODE
+			default:
 				mode = NORMAL;
-			}
-			break;
-
-		// DES_BUTTON pressed
-		case DES_BUTTON_Pin:
-			Buzzer_Trigger();
-			if(mode == TEMPERATURE_SETPOINT_LOW)
-			{
-				temp_setpoint[0] = temp_setpoint[0] - 0.1;
-			}
-			else if(mode == TEMPERATURE_SETPOINT_HIGH)
-			{
-				temp_setpoint[1] = temp_setpoint[1] - 0.1;
-			}
-			else if(mode == HUMIDITY_SETPOINT_LOW)
-			{
-				humid_setpoint[0] = humid_setpoint[0] - 0.1;
-			}
-			else if(mode == HUMIDITY_SETPOINT_HIGH)
-			{
-				humid_setpoint[1] = humid_setpoint[1] - 0.1;
-			}
-			else
-			{
-				mode = NORMAL;
-			}
-			break;
-
-		case DIO0_Pin:
-			/* LoRa receiving */
-			LoRa_receive(&myLoRa, (uint8_t*) received_data, 20);
-			LoRa_Receive_Handle();
-			break;
-
-		// Something went wrong, turn back to NORMAL MODE
-		default:
-			mode = NORMAL;
-			break;
-	}
+				break;
+		}
 }
 
 // Encapsulate the data into a packet containing the string: "source_id, destination_id, sendingType, temperature, humidity, safety"
@@ -1146,6 +1157,7 @@ void LoRa_Receive_Handle()
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+	HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	if (htim == &htim4)
 	{
 		/* DHT22 get data */
@@ -1154,7 +1166,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		if(dht22Status == 1)
 		{
 			/* Check the temperature and humidity level */
-			safety = Alarm_Check(dht22Data.temperature, dht22Data.humidity); // 0: safe, 1: unsafe
+//			safety = Alarm_Check(dht22Data.temperature, dht22Data.humidity); // 0: safe, 1: unsafe
 
 			/* LoRa data encapsulation */
 			Data_Packet_Encapsulation(lora_buffer, 10, 20, 0, dht22Data.temperature, dht22Data.humidity, safety);

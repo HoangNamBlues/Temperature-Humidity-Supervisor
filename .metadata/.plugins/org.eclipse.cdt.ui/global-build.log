@@ -1,9 +1,9 @@
-12:17:45 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+13:01:15 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
 make -j20 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
 ../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1070:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1070 |         char *rcvSrcId;         // pointer to source ID
+../Core/Src/main.c:1074:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
+ 1074 |         char *rcvSrcId;         // pointer to source ID
       |               ^~~~~~~~
 arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: LoRa_Sender_Node.elf
@@ -11,17 +11,24 @@ Finished building target: LoRa_Sender_Node.elf
 arm-none-eabi-size   LoRa_Sender_Node.elf 
 arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
    text	   data	    bss	    dec	    hex	filename
-  47812	    516	   2552	  50880	   c6c0	LoRa_Sender_Node.elf
+  47868	    516	   2496	  50880	   c6c0	LoRa_Sender_Node.elf
 Finished building: default.size.stdout
  
 Finished building: LoRa_Sender_Node.list
  
-12:17:47 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+13:02:30 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+make -j20 all 
+arm-none-eabi-size   LoRa_Sender_Node.elf 
+   text	   data	    bss	    dec	    hex	filename
+  47868	    516	   2496	  50880	   c6c0	LoRa_Sender_Node.elf
+Finished building: default.size.stdout
+ 
+14:03:00 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
 make -j20 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
 ../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1070:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1070 |         char *rcvSrcId;         // pointer to source ID
+../Core/Src/main.c:1076:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
+ 1076 |         char *rcvSrcId;         // pointer to source ID
       |               ^~~~~~~~
 arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: LoRa_Sender_Node.elf
@@ -29,15 +36,8 @@ Finished building target: LoRa_Sender_Node.elf
 arm-none-eabi-size   LoRa_Sender_Node.elf 
 arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
    text	   data	    bss	    dec	    hex	filename
-  47812	    516	   2552	  50880	   c6c0	LoRa_Sender_Node.elf
+  47892	    516	   2496	  50904	   c6d8	LoRa_Sender_Node.elf
 Finished building: default.size.stdout
  
 Finished building: LoRa_Sender_Node.list
- 
-12:20:42 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
-make -j20 all 
-arm-none-eabi-size   LoRa_Sender_Node.elf 
-   text	   data	    bss	    dec	    hex	filename
-  47812	    516	   2552	  50880	   c6c0	LoRa_Sender_Node.elf
-Finished building: default.size.stdout
  

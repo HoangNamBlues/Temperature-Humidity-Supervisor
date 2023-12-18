@@ -59,7 +59,7 @@ TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 LoRa myLoRa;								// LoRa handle
-char lora_buffer[100];						// buffer containing the transmitted data to esp32
+char lora_buffer[40];						// buffer containing the transmitted data to esp32
 char received_data[20];						// buffer containing the received data from esp32
 const char* srcId = "10";					// stm32 address
 const char* desId = "20";					// esp32 address
@@ -534,7 +534,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(DIO0_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 7, 0);
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
   HAL_NVIC_SetPriority(EXTI2_IRQn, 7, 0);
@@ -543,7 +543,7 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI3_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI4_IRQn, 7, 0);
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 7, 0);
@@ -640,11 +640,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 					/* LoRa status encapsulation */
 					Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
 					block = 1;
-					Delay_Ms(100);
 					/* LoRa sending data */
-					LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+					while(!(LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 100)))
+					{
+						Delay_Ms(200);
+					}
 					block = 0;
 					// Start timer 4 again
+					__HAL_TIM_SET_COUNTER(&htim4, 0);
 					HAL_TIM_Base_Start_IT(&htim4);
 				}
 				break;
@@ -671,12 +674,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 					/* LoRa status encapsulation */
 					Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
 					block = 1;
-					Delay_Ms(100);
-
 					/* LoRa sending data */
-					LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+					while(!(LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 100)))
+					{
+						Delay_Ms(200);
+					}
 					block = 0;
 					// Start timer 4 again
+					__HAL_TIM_SET_COUNTER(&htim4, 0);
 					HAL_TIM_Base_Start_IT(&htim4);
 				}
 				break;
@@ -753,12 +758,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 // Encapsulate the data into a packet containing the string: "source_id, destination_id, sendingType, temperature, humidity, safety"
 void Data_Packet_Encapsulation(char* buffer ,int src_id, int des_id, int sendingType, double temp, double humid, int safety)
 {
+	memset(buffer, 0, strlen(buffer));
 	sprintf(buffer, "%d,%d,%d,%0.1lf,%0.1lf,%d", src_id, des_id, sendingType, temp, humid, safety);
 }
 
 // Encapsulate the status into a packet containing the string: "source_id,destination_id, sendingType, cmd_status, alarm_status"
 void Status_Packet_Encapsulation(char* buffer ,int src_id, int des_id, int sendingType, int cmd_status, int alarm_status, int bulb_status)
 {
+	memset(buffer, 0, strlen(buffer));
 	sprintf(buffer, "%d,%d,%d,%d,%d,%d", src_id, des_id, sendingType, cmd_status, alarm_status, bulb_status);
 }
 
@@ -1001,7 +1008,6 @@ void Long_Pressed_Button(void)
 			Lcd_Sytem_State_Print(mode);
 		}
 	}
-	__HAL_TIM_SET_COUNTER(&htim4, 0);
 	HAL_TIM_Base_Start_IT(&htim4);
 }
 
@@ -1145,14 +1151,17 @@ void LoRa_Receive_Handle()
 		Delay_Ms(100);
 
 		/* LoRa sending data */
-		LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500);
+		while(!(LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500)))
+		{
+			Delay_Ms(200);
+		}
 
 		cmdStatus = 0;
 		block = 0;
-
-		// Start timer 4 again
-		HAL_TIM_Base_Start_IT(&htim4);
 	}
+	// Start timer 4 again
+	__HAL_TIM_SET_COUNTER(&htim4, 0);
+	HAL_TIM_Base_Start_IT(&htim4);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)

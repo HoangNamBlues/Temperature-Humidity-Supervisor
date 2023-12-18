@@ -56,7 +56,7 @@ unsigned long lastSendTime = 0;
 unsigned long lastReceiveTime = 0;
 unsigned long lastWsTime = 0;
 unsigned long lastCheck = 0;
-String backendIP = "192.168.1.6:5000";                       // Backend IP address and its port
+String backendIP = "";                                       // Backend IP address and its port
 String jwtToken = "";                                        // JWT token variable
 DHT22Data data = {0, 0, false};                              // DHT22 received data
 ConnectButton wifiButton = {false, false, false, 22};        // button to connect/disconnect wifi
@@ -81,6 +81,7 @@ bool alarm_status = 0;                                       // 0: Alarm mode is
 bool bulb_status = 0;                                        // 0: Bulb is OFF, 1: Bulb is ON
 bool safeFlag = 0;                                           // 0: the temperature/humdity range is in safe range, 1: the temperature/humidity is in dangerous range
 bool postFlag = false;                                       // Flag for checking the POST process
+unsigned int count = 0;                                               // counter for detecting whether STM32F1 stop sending LoRa data.
 
 /* Function Prototype */
 // LED
@@ -140,6 +141,7 @@ void setup()
   delay(1000);
   display.clearDisplay(); // Clear the buffer
   display.display();
+
   // Display text
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
@@ -209,7 +211,7 @@ void loop()
     }
     webserverButton = false;
   }
-  if (millis() - lastReceiveTime > 20)
+  if (millis() - lastReceiveTime > 5)
   {
     // Receive data from stm32f1 over LoRa
     if (loraButton.connect)
@@ -217,6 +219,7 @@ void loop()
       LoRaReceive(); // receive dht22 data
     }
     OledDisplay(data.temp, data.humid); // display data on OLED
+    lastReceiveTime = millis();
   }
   // Check if the temperature/humidity is in dangerous range
   if (millis() - lastCheck > 200)
@@ -253,10 +256,6 @@ void loop()
             lastSendTime = millis();
           }
         }
-        else
-        {
-          ws.textAll("Failed");
-        }
       // PUSH data to the website directly
       if (realtimeFlag == true)
       {
@@ -265,33 +264,22 @@ void loop()
           // Check whether the command was processed
           if (cmdFlag == 1)
           {
-            http.end();
-            Delayms(20);
+            // http.end();
+            // Delayms(10);
             ws.textAll("message,1");
-            // if (postFlag == false)
-            // {
-            //   cmdFlag = 0;
-            // }
             cmdFlag = 0;
           }
           else if (cmdFlag == 2)
           {
-            http.end();
-            Delayms(20);
+            // http.end();
+            // Delayms(10);
             ws.textAll("message,0");
-            // if (postFlag == false)
-            // {
-            //   cmdFlag = 0;
-            // }
             cmdFlag = 0;
           }
           String message = "data," + String(data.temp) + "," + String(data.humid) + "," + String(alarm_status) + "," + String(bulb_status);
-          http.end();
+          // http.end();
+          // Delayms(10);
           ws.textAll(message);
-          // if (postFlag == false)
-          // {
-          //   data.received = false;
-          // }
           data.received = false;
           lastWsTime = millis();
         }
@@ -556,13 +544,7 @@ void LoRaConfig(int nss, int rst, int di0)
     Delayms(500);
   }
 
-  LoRa.setSignalBandwidth(250E3);
-
-  // Change sync word (0xF1) to match the receiver LoRa
-  // This code ensure that you don't get LoRa messages
-  // from other LoRa transceivers
-  // ranges from 0-0xFF
-  // LoRa.setSyncWord(0xF1);
+  LoRa.setSignalBandwidth(250E3); // set LoRa bandwidth 250Hz
 }
 
 /* LoRa Handle */
@@ -774,6 +756,7 @@ void LoRaReceive()
   // Check if the packer size is large than 0
   if (packetSize)
   {
+    count = 0;
     // Receive the data from LoRa sender in String format
     while (LoRa.available())
     {
@@ -837,12 +820,10 @@ void LoRaReceive()
                 if (!strcmp(cmdStatus, "1"))
                 {
                   cmdFlag = 1; // command processing succeeded
-                  Serial.println("cmd: 1");
                 }
                 else if (!strcmp(cmdStatus, "0"))
                 {
                   cmdFlag = 2; // command processing failed
-                  Serial.println("cmd: 2");
                 }
                 // Check the alarm status
                 if (!strcmp(alarmStatus, "1"))
@@ -896,6 +877,26 @@ void LoRaReceive()
     Serial.println(cmdStatus);
     Serial.print("\n\n\n");
 #endif
+  }
+  else
+  {
+    count = count + 1;
+    if(count == 500)
+    {
+      data.temp = 0;
+      data.humid = 0;
+      data.received = false;
+      if (wifiButton.connect == true)
+      {
+        if(realtimeFlag == true)
+        {
+          // http.end();
+          // Delayms(20);
+          ws.textAll("message,2");
+        }
+      }
+      count = 0;
+    }
   }
 }
 
@@ -981,6 +982,7 @@ void LoRaReceive()
     // Send a GET request to stop sending data to asp.net webserver
     server.on("/Stop", HTTP_GET, [](AsyncWebServerRequest *request){
       sendingFlag = false;
+      ws.textAll("Failed");
       request->send(200, "text/plain", "Stop request is sent successfully"); }
     );
 
@@ -1070,7 +1072,7 @@ void LoRaReceive()
       Delayms(10);
       request->send(200, "text/plain", "Received request successfully"); }
     );
-    }
+  }
 
 /* Websocket */
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)

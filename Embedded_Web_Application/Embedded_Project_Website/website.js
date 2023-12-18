@@ -1202,7 +1202,7 @@ function SendBackendIP(backendIp) {
   socket.send(`backendIP,${backendIp}:5000`);
 }
 
-/* Function to send/unsend temperature and humidty values from esp32 to webserver */
+/* Function to send/unsend tz`emperature and humidty values from esp32 to webserver */
 async function SendHandle(option) {
   if (option === "Send") {
     /* Send command to ESP32 Web Server to send the temperature humidity values */
@@ -1286,10 +1286,11 @@ function WebsocketInit(esp32IP) {
       }
     if (socketData[0] === "message") { 
       if (socketData[1] === "0") {
-        alert("Failed to send the command. Please try again");
-      }
-      else if (socketData[1] === "1") {
-        alert("The command is sent successfully");  
+        alert("Failed to send the command. Please try again.");
+      } else if (socketData[1] === "1") {
+        alert("The command is sent successfully.");
+      } else if (socketData[1] === "2") {
+        alert("STM32F1 did not send data! Please check it.");
       }
     }
     // Handle incoming data from ESP32
@@ -1299,16 +1300,15 @@ function WebsocketInit(esp32IP) {
     if (event.wasClean) {
       console.log("WebSocket connection closed cleanly");
       alert("WebSocket connection closed cleanly");
-        $(".ws-connect-button").fadeIn();
-      $(".ws-disconnect-button").hide();
-      socket.close();  
     } else {
       console.error("WebSocket connection abruptly closed");
       alert("WebSocket connection abruptly closed");
-        $(".ws-connect-button").fadeIn();
-      $(".ws-disconnect-button").hide();
-      socket.close(); 
     }
+    $(".ws-connect-button").fadeIn();
+    $(".ws-disconnect-button").hide();
+    $("#temperature-chart").hide();
+    $("#humidity-chart").hide();
+    socket.close(); 
     RealtimeMode("OFF");
     realtimeTemperature = null;
     realtimeHumidity = null;
@@ -1317,6 +1317,12 @@ function WebsocketInit(esp32IP) {
   socket.onerror = (error) => {
     console.error("WebSocket error: " + error.message);
     alert("WebSocket error: " + error.message);
+    $(".ws-connect-button").fadeIn();
+    $(".ws-disconnect-button").hide();
+    $("#temperature-chart").hide();
+    $("#humidity-chart").hide();
+    socket.close();
+    RealtimeMode("OFF");
     realtimeTemperature = null;
     realtimeHumidity = null;
   };
