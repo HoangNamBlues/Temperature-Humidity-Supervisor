@@ -916,7 +916,7 @@ void LoRaReceive()
 /* ESP32 Web Server configuration */
   void WebServerConfig()
   {
-    // Send a GET request to turn on/off the alarm
+    // Listening a GET request to turn on/off the alarm
     server.on("/Alarm", HTTP_GET, [](AsyncWebServerRequest *request){
       String message;
       if (request->hasParam("Status"))
@@ -944,7 +944,7 @@ void LoRaReceive()
       request->send(200, "text/plain", "Buzzer status command: " + message); }
     );
 
-    // Send a GET request to turn on/off the bulb
+    // Listening a GET request to turn on/off the bulb
     server.on("/Bulb", HTTP_GET, [](AsyncWebServerRequest *request)
     {
       String message;
@@ -973,20 +973,20 @@ void LoRaReceive()
       request->send(200, "text/plain", "Bulb status command: " + message); 
     });
 
-    // Send a GET request to start sending data to asp.net webserver
+    // Listening a GET request to start sending data to asp.net webserver
     server.on("/Start", HTTP_GET, [](AsyncWebServerRequest *request){
       sendingFlag = true;
       request->send(200, "text/plain", "Start request is sent successfully"); }
     );
 
-    // Send a GET request to stop sending data to asp.net webserver
+    // Listening a GET request to stop sending data to asp.net webserver
     server.on("/Stop", HTTP_GET, [](AsyncWebServerRequest *request){
       sendingFlag = false;
       ws.textAll("Failed");
       request->send(200, "text/plain", "Stop request is sent successfully"); }
     );
 
-    // Send a GET request to open/close the realtime mode
+    // Listening a GET request to open/close the realtime mode
     server.on("/Realtime", HTTP_GET, [](AsyncWebServerRequest *request){
       String message;
       if (request->hasParam("Status"))
@@ -1004,7 +1004,14 @@ void LoRaReceive()
       request->send(200, "text/plain", "Realtime request is sent successfully"); }
     );
 
-    // Send a GET request to set the safe range for humidity/temperature
+    // Listening a GET request to update the status of the bulb and alarm mode
+    server.on("/Update", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+      LoRaSend("10", "5");
+      Delayms(10);
+      request->send(200, "text/plain", "Update request is sent successfully"); });
+
+    // Listening a GET request to set the safe range for humidity/temperature
     server.on("/TemperatureRange", HTTP_GET, [](AsyncWebServerRequest *request){
       String lowest, highest;
       double d;

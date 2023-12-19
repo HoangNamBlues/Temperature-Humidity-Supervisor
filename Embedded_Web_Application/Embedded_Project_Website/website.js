@@ -150,6 +150,7 @@ $(".register-button").click(function () {
   else if ($(".register-button").text() == "Refresh")
   { 
     Refresh();
+    UpdateStatus();
   }
   // Confirm button
   else {
@@ -419,7 +420,7 @@ $(".back-button").click(function () {
 async function NoneFilter(date = "") {
   if (option == 0) {
     if (date === "") {
-      url = "https://localhost:5000/Api/Temperature";
+      url = `https://localhost:5000/Api/Temperature`;
     } else {
       url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
     }
@@ -446,7 +447,7 @@ async function NoneFilter(date = "") {
       });
   } else {
     if (date === "") {
-      url = "https://localhost:5000/Api/Humidity";
+      url = `https://localhost:5000/Api/Humidity`;
     } else {
       url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
     }
@@ -478,7 +479,7 @@ async function NoneFilter(date = "") {
 async function LatestFilter(date = "") {
   if (option == 0) {
      if (date === "") {
-       url = "https://localhost:5000/Api/Temperature";
+       url = `https://localhost:5000/Api/Temperature`;
      } else {
        url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
      }
@@ -508,7 +509,7 @@ async function LatestFilter(date = "") {
       });
   } else {
     if (date === "") {
-      url = "https://localhost:5000/Api/Humidity";
+      url = `https://localhost:5000/Api/Humidity`;
     } else {
       url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
     }
@@ -543,7 +544,7 @@ async function LatestFilter(date = "") {
 async function OldestFilter(date = "") {
   if (option == 0) {
      if (date === "") {
-       url = "https://localhost:5000/Api/Temperature";
+       url = `https://localhost:5000/Api/Temperature`;
      } else {
        url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
      }
@@ -573,7 +574,7 @@ async function OldestFilter(date = "") {
       });
   } else {
     if (date === "") {
-      url = "https://localhost:5000/Api/Humidity";
+      url = `https://localhost:5000/Api/Humidity`;
     } else {
       url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
     }
@@ -608,7 +609,7 @@ async function OldestFilter(date = "") {
 async function DescendingFilter(date = "") {
   if (option == 0) {
     if (date === "") {
-      url = "https://localhost:5000/Api/Temperature";
+      url = `https://localhost:5000/Api/Temperature`;
     }
     else { 
       url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
@@ -640,7 +641,7 @@ async function DescendingFilter(date = "") {
   } else {
     if (date === "")
     { 
-      url = "https://localhost:5000/Api/Humidity";
+      url = `https://localhost:5000/Api/Humidity`;
     }
     else { 
       url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
@@ -676,7 +677,7 @@ async function DescendingFilter(date = "") {
 async function AscendingFilter(date = "") {
   if (option == 0) {
     if (date === "") {
-      url = "https://localhost:5000/Api/Temperature";
+      url = `https://localhost:5000/Api/Temperature`;
     } else {
       url = `https://localhost:5000/Api/Temperature/SearchByDate/${date}`;
     }
@@ -706,7 +707,7 @@ async function AscendingFilter(date = "") {
       });
   } else {
     if (date === "") {
-      url = "https://localhost:5000/Api/Humidity";
+      url = `https://localhost:5000/Api/Humidity`;
     } else {
       url = `https://localhost:5000/Api/Humidity/SearchByDate/${date}`;
     }
@@ -830,7 +831,7 @@ async function Average(date) {
 /* Function to get the latest humidity value */
 async function GetLatestHumidity() {
   /* Get data from the backend server */
-  await fetch("https://localhost:5000/Api/Humidity", {
+  await fetch(`https://localhost:5000/Api/Humidity`, {
     headers: {
       Authorization: `Bearer ${jwtToken}`,
     },
@@ -894,7 +895,7 @@ async function Login() {
   formDataJsonString = JSON.stringify(plainFormData);
 
   // POST request to login user
-  const response = await fetch("https://localhost:5000/Account/Login", {
+  const response = await fetch(`https://localhost:5000/Account/Login`, {
     method: "POST",
     headers: {
       Accept: "application/json, text/plain",
@@ -952,7 +953,7 @@ async function Register() {
   console.log(formDataJsonString);
 
   // POST request to register user
-  const response = await fetch("https://localhost:5000/Account/Register", {
+  const response = await fetch(`https://localhost:5000/Account/Register`, {
     method: "POST",
     headers: {
       Accept: "application/json, text/plain",
@@ -1002,7 +1003,7 @@ async function Refresh() {
   formDataJsonString = JSON.stringify(plainFormData);
   // POST request to register user
   const response = await fetch(
-    "https://localhost:5000/Account/Generate-New-Jwt-Token",
+    `https://localhost:5000/Account/Generate-New-Jwt-Token`,
     {
       method: "POST",
       headers: {
@@ -1542,4 +1543,12 @@ function exportTableToExcel(tableID, filename = "") {
     //triggering the function
     downloadLink.click();
   }
+}
+
+// Fucntion to update status of bulb and alarm mode
+async function UpdateStatus() {
+  /* Send command to ESP32 Web Server to update the status of the bulb and alarm mode */
+    await fetch(`http://${esp32IP}/Update`, {
+      mode: "no-cors"
+    });
 }

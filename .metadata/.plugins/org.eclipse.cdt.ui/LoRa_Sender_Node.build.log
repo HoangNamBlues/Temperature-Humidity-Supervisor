@@ -1,9 +1,9 @@
-14:03:00 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
+23:38:13 **** Incremental Build of configuration Debug for project LoRa_Sender_Node ****
 make -j20 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F103xB -c -I"D:/My-Projects/Git/Temperature-Humidity-Supervisor/LoRa_Sender_Node/Board-Support-Packet/Inc" -I../Core/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc -I../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
 ../Core/Src/main.c: In function 'LoRa_Receive_Handle':
-../Core/Src/main.c:1076:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
- 1076 |         char *rcvSrcId;         // pointer to source ID
+../Core/Src/main.c:1073:15: warning: variable 'rcvSrcId' set but not used [-Wunused-but-set-variable]
+ 1073 |         char *rcvSrcId;         // pointer to source ID
       |               ^~~~~~~~
 arm-none-eabi-gcc -o "LoRa_Sender_Node.elf" @"objects.list"   -mcpu=cortex-m3 -T"D:\My-Projects\Git\Temperature-Humidity-Supervisor\LoRa_Sender_Node\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LoRa_Sender_Node.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: LoRa_Sender_Node.elf
@@ -11,11 +11,11 @@ Finished building target: LoRa_Sender_Node.elf
 arm-none-eabi-size   LoRa_Sender_Node.elf 
 arm-none-eabi-objdump -h -S  LoRa_Sender_Node.elf  > "LoRa_Sender_Node.list"
    text	   data	    bss	    dec	    hex	filename
-  47892	    516	   2496	  50904	   c6d8	LoRa_Sender_Node.elf
+  47884	    516	   2496	  50896	   c6d0	LoRa_Sender_Node.elf
 Finished building: default.size.stdout
  
 Finished building: LoRa_Sender_Node.list
  
 
-14:03:00 Build Finished. 0 errors, 1 warnings. (took 740ms)
+23:38:14 Build Finished. 0 errors, 1 warnings. (took 645ms)
 

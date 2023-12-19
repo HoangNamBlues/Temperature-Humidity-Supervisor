@@ -71,10 +71,9 @@ double humid_setpoint[2] = {60.0, 80.0};	// array containing lowest and highest 
 uint8_t dht22Status = 0;					// variable to check whether the dht22 data is received successfully
 uint8_t loraStatus = 0;						// variable to check whether the LoRa data is transmitted successfully
 int cmdStatus = 0;							// variable to check whether the command is processed successfully
-int alarmStatus = 0;						// alarm status
-int bulbStatus = 0;						// motor status
+int alarmStatus = 0;						// alarm mode status
+int bulbStatus = 0;							// bulb status
 int safety = 0;								// safety status
-uint8_t block = 0;							// flag to block sending LoRa data
 
 /* USER CODE END PV */
 
@@ -639,13 +638,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 					/* LoRa status encapsulation */
 					Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
-					block = 1;
+					Delay_Ms(100);
 					/* LoRa sending data */
-					while(!(LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 100)))
+					while(!(LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500)))
 					{
 						Delay_Ms(200);
 					}
-					block = 0;
 					// Start timer 4 again
 					__HAL_TIM_SET_COUNTER(&htim4, 0);
 					HAL_TIM_Base_Start_IT(&htim4);
@@ -673,13 +671,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 					/* LoRa status encapsulation */
 					Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, 2, alarmStatus, bulbStatus);
-					block = 1;
+					Delay_Ms(100);
 					/* LoRa sending data */
-					while(!(LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 100)))
+					while(!(LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 500)))
 					{
 						Delay_Ms(200);
 					}
-					block = 0;
 					// Start timer 4 again
 					__HAL_TIM_SET_COUNTER(&htim4, 0);
 					HAL_TIM_Base_Start_IT(&htim4);
@@ -1144,10 +1141,13 @@ void LoRa_Receive_Handle()
 				bulbStatus = 0;
 			}
 		}
+		else if (!strcmp(cmdType,"5"))
+		{
+			cmdStatus = 1;
+		}
 
 		/* LoRa status encapsulation */
 		Status_Packet_Encapsulation(lora_buffer, 10, 20, 1, cmdStatus, alarmStatus, bulbStatus);
-		block = 1;
 		Delay_Ms(100);
 
 		/* LoRa sending data */
@@ -1157,7 +1157,6 @@ void LoRa_Receive_Handle()
 		}
 
 		cmdStatus = 0;
-		block = 0;
 	}
 	// Start timer 4 again
 	__HAL_TIM_SET_COUNTER(&htim4, 0);
@@ -1179,11 +1178,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			/* LoRa data encapsulation */
 			Data_Packet_Encapsulation(lora_buffer, 10, 20, 0, dht22Data.temperature, dht22Data.humidity, safety);
 
-			if (block == 0)
-			{
-				/* LoRa sending data */
-				LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 100);
-			}
+			/* LoRa sending data */
+			LoRa_transmit(&myLoRa, (uint8_t*) lora_buffer, strlen(lora_buffer), 100);
 		}
 
 		if (safety == 0)
